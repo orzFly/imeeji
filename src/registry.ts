@@ -12,7 +12,8 @@ function getRegistryHost(registry: string): string {
 }
 
 async function getDockerHubToken(repository: string): Promise<string | null> {
-  const authUrl = `https://auth.docker.io/token?service=registry.docker.io&scope=repository:${repository}:pull`;
+  const authUrl =
+    `https://auth.docker.io/token?service=registry.docker.io&scope=repository:${repository}:pull`;
   try {
     const response = await fetch(authUrl);
     if (!response.ok) return null;
@@ -23,7 +24,7 @@ async function getDockerHubToken(repository: string): Promise<string | null> {
   }
 }
 
-async function fetchWithAuth(
+function fetchWithAuth(
   url: string,
   token?: string,
 ): Promise<Response> {
@@ -65,7 +66,9 @@ export async function fetchTags(
       response = await fetchWithAuth(url, token);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      console.error(`Failed to fetch tags from ${registry}/${repository}: ${msg}`);
+      console.error(
+        `Failed to fetch tags from ${registry}/${repository}: ${msg}`,
+      );
       return [];
     }
 
@@ -94,7 +97,9 @@ export async function fetchTags(
       const match = linkHeader.match(/<([^>]+)>/);
       if (match) {
         const nextUrl = match[1];
-        url = nextUrl.startsWith("http") ? nextUrl : `https://${host}${nextUrl}`;
+        url = nextUrl.startsWith("http")
+          ? nextUrl
+          : `https://${host}${nextUrl}`;
       } else {
         url = null;
       }

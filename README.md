@@ -30,19 +30,23 @@ imeeji --version           # Show version
 
 ### Options
 
-| Option | Description |
-|--------|-------------|
+| Option          | Description                                   |
+| --------------- | --------------------------------------------- |
 | `-n, --dry-run` | Print unified diff without modifying the file |
-| `-y, --yes` | Auto-accept latest versions (non-interactive) |
-| `-h, --help` | Print help message |
-| `-V, --version` | Print version |
+| `-y, --yes`     | Auto-accept latest versions (non-interactive) |
+| `-h, --help`    | Print help message                            |
+| `-V, --version` | Print version                                 |
 
 ## How It Works
 
-1. **Parse** - Scans the input file for docker image references matching `domain/path:tag` pattern
-2. **Query** - Fetches available tags from Docker Registry API v2 (supports Docker Hub, ghcr.io, gcr.io, quay.io, etc.)
-3. **Analyze** - Groups tags by prefix (`v`, `release-`) and suffix (`-alpine`, `-slim`), then finds the latest version in each group
-4. **Select** - Presents a batch selection UI showing current vs. recommended upgrades
+1. **Parse** - Scans the input file for docker image references matching
+   `domain/path:tag` pattern
+2. **Query** - Fetches available tags from Docker Registry API v2 (supports
+   Docker Hub, ghcr.io, gcr.io, quay.io, etc.)
+3. **Analyze** - Groups tags by prefix (`v`, `release-`) and suffix (`-alpine`,
+   `-slim`), then finds the latest version in each group
+4. **Select** - Presents a batch selection UI showing current vs. recommended
+   upgrades
 5. **Apply** - Outputs a unified diff or patches the file directly
 
 ## Example
@@ -78,15 +82,16 @@ Updated 1 image(s) in config.nix
 
 The tool intelligently groups tags to suggest appropriate upgrades:
 
-| Current Tag | Suggested Upgrade | Reasoning |
-|-------------|-------------------|-----------|
-| `18.1-alpine` | `18.2-alpine` | Same variant (alpine), newer version |
-| `v0.9.5` | `v0.9.6` | Same prefix (`v`), newer version |
-| `8-alpine` | `8.0-alpine` | Same variant, latest in group |
+| Current Tag   | Suggested Upgrade | Reasoning                            |
+| ------------- | ----------------- | ------------------------------------ |
+| `18.1-alpine` | `18.2-alpine`     | Same variant (alpine), newer version |
+| `v0.9.5`      | `v0.9.6`          | Same prefix (`v`), newer version     |
+| `8-alpine`    | `8.0-alpine`      | Same variant, latest in group        |
 
 Common prefixes: `v`, `release-`, `stable-`
 
-Common suffixes: `-alpine`, `-slim`, `-debian`, `-ubuntu`, `-bullseye`, `-bookworm`
+Common suffixes: `-alpine`, `-slim`, `-debian`, `-ubuntu`, `-bullseye`,
+`-bookworm`
 
 ## Dry Run Mode
 
@@ -97,6 +102,7 @@ imeeji --dry-run config.nix
 ```
 
 Output:
+
 ```diff
 --- a/config.nix
 +++ b/config.nix
@@ -127,11 +133,11 @@ deno test -P src/
 
 Permissions are configured in `deno.json` and can be enabled with the `-P` flag:
 
-| Permission | Reason |
-|------------|--------|
-| `net` | Fetch tags from Docker registries |
-| `read` | Read configuration files |
-| `write` | Modify configuration files (not needed for `--dry-run`) |
+| Permission | Reason                                                  |
+| ---------- | ------------------------------------------------------- |
+| `net`      | Fetch tags from Docker registries                       |
+| `read`     | Read configuration files                                |
+| `write`    | Modify configuration files (not needed for `--dry-run`) |
 
 ## Supported Registries
 

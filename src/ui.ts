@@ -1,5 +1,4 @@
-import { ImageUpdate, ImageRef, VariantGroup } from "./types.ts";
-import { findMatchingVariant, parseTag } from "./analyzer.ts";
+import type { ImageRef, ImageUpdate, VariantGroup } from "./types.ts";
 
 const RESET = "\x1b[0m";
 const BOLD = "\x1b[1m";
@@ -39,7 +38,9 @@ export async function selectUpdates(
     return [];
   }
 
-  console.log(`\n${BOLD}Found ${updates.length} image(s) with available upgrades:${RESET}\n`);
+  console.log(
+    `\n${BOLD}Found ${updates.length} image(s) with available upgrades:${RESET}\n`,
+  );
 
   const nameWidth = Math.max(
     ...updates.map((u) => formatImageName(u.image).length),
@@ -48,19 +49,27 @@ export async function selectUpdates(
   const tagWidth = 20;
 
   console.log(
-    `${DIM}#   ${"Image".padEnd(nameWidth)} ${"Current".padEnd(tagWidth)} → ${"Upgrade".padEnd(tagWidth)}${RESET}`,
+    `${DIM}#   ${"Image".padEnd(nameWidth)} ${"Current".padEnd(tagWidth)} → ${
+      "Upgrade".padEnd(tagWidth)
+    }${RESET}`,
   );
   console.log(
-    `${DIM}${"".padEnd(4)} ${"".padEnd(nameWidth, "─")} ${"".padEnd(tagWidth, "─")}   ${"".padEnd(tagWidth, "─")}${RESET}`,
+    `${DIM}${"".padEnd(4)} ${"".padEnd(nameWidth, "─")} ${
+      "".padEnd(tagWidth, "─")
+    }   ${"".padEnd(tagWidth, "─")}${RESET}`,
   );
 
   for (let i = 0; i < updates.length; i++) {
     const u = updates[i];
     const num = `${i + 1}.`.padEnd(3);
-    const name = truncate(formatImageName(u.image), nameWidth).padEnd(nameWidth);
+    const name = truncate(formatImageName(u.image), nameWidth).padEnd(
+      nameWidth,
+    );
     const current = truncate(u.currentTag, tagWidth).padEnd(tagWidth);
     const newTag = truncate(u.newTag, tagWidth);
-    console.log(`${num} ${name} ${YELLOW}${current}${RESET} → ${GREEN}${newTag}${RESET}`);
+    console.log(
+      `${num} ${name} ${YELLOW}${current}${RESET} → ${GREEN}${newTag}${RESET}`,
+    );
   }
 
   if (autoYes) {
@@ -92,7 +101,9 @@ export async function selectUpdates(
     selectedIndices = updates.map((_, i) => i);
   } else {
     const nums = answer.split(/[,.\s]+/).map((s) => parseInt(s.trim(), 10));
-    selectedIndices = nums.filter((n) => n >= 1 && n <= updates.length).map((n) => n - 1);
+    selectedIndices = nums.filter((n) => n >= 1 && n <= updates.length).map((
+      n,
+    ) => n - 1);
   }
 
   if (selectedIndices.length === 0) {
@@ -104,7 +115,12 @@ export async function selectUpdates(
 
   for (const idx of selectedIndices) {
     const u = updates[idx];
-    const selectedTag = await selectTagForImage(u.image, u.currentTag, u.variants, u.currentVariant);
+    const selectedTag = await selectTagForImage(
+      u.image,
+      u.currentTag,
+      u.variants,
+      u.currentVariant,
+    );
     if (selectedTag) {
       results.push({
         ...u.image,
@@ -132,10 +148,20 @@ async function selectTagForImage(
       if (!activeVariant) return null;
     }
 
-    const selectedTag = await selectTagInVariant(image, currentTag, activeVariant, variants);
+    const selectedTag = await selectTagInVariant(
+      image,
+      currentTag,
+      activeVariant,
+      variants,
+    );
 
     if (selectedTag === "__OTHER_VARIANTS__") {
-      activeVariant = await selectVariant(image, currentTag, variants, activeVariant);
+      activeVariant = await selectVariant(
+        image,
+        currentTag,
+        variants,
+        activeVariant,
+      );
       if (!activeVariant) return null;
       continue;
     }
@@ -223,19 +249,24 @@ async function selectVariant(
     }
 
     if (v.older.length > 0) {
-      const olderPreview = v.older.slice(0, 3).map((t) => t.original).join("  ");
+      const olderPreview = v.older.slice(0, 3).map((t) => t.original).join(
+        "  ",
+      );
       line += `\n     ${DIM}${olderPreview}${RESET}`;
     }
 
     if (v.floating.length > 0) {
-      const floatingPreview = v.floating.slice(0, 2).map((t) => t.original).join(", ");
+      const floatingPreview = v.floating.slice(0, 2).map((t) => t.original)
+        .join(", ");
       line += `\n     ${DIM}(${floatingPreview})${RESET}`;
     }
 
     console.log(line);
   }
 
-  const answer = await prompt("\nSelect variant (number, or Enter to cancel): ");
+  const answer = await prompt(
+    "\nSelect variant (number, or Enter to cancel): ",
+  );
 
   if (answer === "") {
     return null;

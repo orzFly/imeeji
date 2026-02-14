@@ -1,4 +1,4 @@
-import { ImageRef } from "./types.ts";
+import type { ImageRef } from "./types.ts";
 
 export interface DiffHunk {
   oldStart: number;
@@ -23,7 +23,6 @@ export function generateDiff(
   const hunks: DiffHunk[] = [];
   const contextLines = 3;
 
-  let currentLine = 1;
   let lineIdx = 0;
 
   const newLines: string[] = [];
@@ -36,7 +35,8 @@ export function generateDiff(
 
     if (update) {
       const originalFull = update.originalFull ?? update.full;
-      const newImageRef = `${update.registry}/${update.repository}:${update.tag}`;
+      const newImageRef =
+        `${update.registry}/${update.repository}:${update.tag}`;
       newLines.push(line.replace(originalFull, newImageRef));
     } else {
       newLines.push(line);
@@ -114,7 +114,8 @@ export function applyUpdates(
 
     if (update) {
       const originalFull = update.originalFull ?? update.full;
-      const newImageRef = `${update.registry}/${update.repository}:${update.tag}`;
+      const newImageRef =
+        `${update.registry}/${update.repository}:${update.tag}`;
       return line.replace(originalFull, newImageRef);
     }
 

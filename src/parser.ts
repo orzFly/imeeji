@@ -1,10 +1,10 @@
-import { ImageRef } from "./types.ts";
+import type { ImageRef } from "./types.ts";
 
-const IMAGE_PATTERN = /(?<registry>[a-z0-9][a-z0-9.-]*\.[a-z]{2,})\/(?<repo>[a-z0-9_.-]+(?:\/[a-z0-9_.-]+)*):(?<tag>[a-zA-Z0-9._-]+)/gi;
+const IMAGE_PATTERN =
+  /(?<registry>[a-z0-9][a-z0-9.-]*\.[a-z]{2,})\/(?<repo>[a-z0-9_.-]+(?:\/[a-z0-9_.-]+)*):(?<tag>[a-zA-Z0-9._-]+)/gi;
 
 export function findImages(content: string): ImageRef[] {
   const images: ImageRef[] = [];
-  const lines = content.split("\n");
 
   for (const match of content.matchAll(IMAGE_PATTERN)) {
     const fullMatch = match[0];
@@ -44,8 +44,7 @@ export function applyUpdates(content: string, updates: ImageRef[]): string {
 
   let result = content;
   for (const update of sorted) {
-    result =
-      result.slice(0, update.startIndex) +
+    result = result.slice(0, update.startIndex) +
       update.full +
       result.slice(update.endIndex);
   }

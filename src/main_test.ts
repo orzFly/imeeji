@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { parseTag, groupByVariant, findBestUpgrade } from "./analyzer.ts";
+import { groupByVariant, parseTag } from "./analyzer.ts";
 import { findImages } from "./parser.ts";
 
 Deno.test("parseTag handles semver with suffix", () => {
@@ -55,7 +55,14 @@ Deno.test("parseTag handles prerelease prefixes", () => {
 });
 
 Deno.test("groupByVariant groups by suffix", () => {
-  const tags = ["v1.0.0", "v1.0.0-alpine", "v1.1.0", "v1.1.0-alpine", "latest", "alpine"];
+  const tags = [
+    "v1.0.0",
+    "v1.0.0-alpine",
+    "v1.1.0",
+    "v1.1.0-alpine",
+    "latest",
+    "alpine",
+  ];
   const variants = groupByVariant(tags);
 
   assertEquals(variants.length, 2);

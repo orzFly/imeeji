@@ -1,5 +1,5 @@
-import { parse as parseSemver, compare } from "@std/semver";
-import { ParsedTag, VariantGroup } from "./types.ts";
+import { compare, parse as parseSemver } from "@std/semver";
+import type { ParsedTag, VariantGroup } from "./types.ts";
 
 const COMMON_SUFFIXES = [
   "-alpine",
@@ -44,7 +44,10 @@ export function parseTag(tag: string): ParsedTag {
     const lowerSuffix = s.toLowerCase();
     if (lowerRemaining.endsWith(lowerSuffix)) {
       suffix = remaining.slice(lowerRemaining.length - lowerSuffix.length);
-      remaining = remaining.slice(0, lowerRemaining.length - lowerSuffix.length);
+      remaining = remaining.slice(
+        0,
+        lowerRemaining.length - lowerSuffix.length,
+      );
       break;
     }
   }
@@ -79,7 +82,9 @@ export function parseTag(tag: string): ParsedTag {
   if (remaining.toLowerCase() === "v") {
     prefix = prefix ? `${prefix}v` : "v";
     remaining = "";
-  } else if (remaining.toLowerCase().startsWith("v") && /^\d/.test(remaining.slice(1))) {
+  } else if (
+    remaining.toLowerCase().startsWith("v") && /^\d/.test(remaining.slice(1))
+  ) {
     prefix = prefix ? `${prefix}v` : "v";
     remaining = remaining.slice(1);
   }

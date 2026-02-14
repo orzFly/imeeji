@@ -1,10 +1,14 @@
 import { parseArgs } from "@std/cli/parse-args";
 import { findImages } from "./parser.ts";
 import { fetchTags, getRepositoryKey } from "./registry.ts";
-import { groupByVariant, findBestUpgrade, findMatchingVariant } from "./analyzer.ts";
+import {
+  findBestUpgrade,
+  findMatchingVariant,
+  groupByVariant,
+} from "./analyzer.ts";
 import { selectUpdates } from "./ui.ts";
-import { generateDiff, applyUpdates as applyPatches } from "./patcher.ts";
-import { ImageUpdate } from "./types.ts";
+import { applyUpdates as applyPatches, generateDiff } from "./patcher.ts";
+import type { ImageUpdate } from "./types.ts";
 
 const VERSION = "0.1.0";
 
