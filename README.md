@@ -7,7 +7,7 @@ Interactive Docker image upgrade tool for configuration files.
 ### Using Deno
 
 ```bash
-deno install --allow-net --allow-read --allow-write -n imeeji jsr:imeeji
+deno install -P -n imeeji jsr:imeeji
 ```
 
 ### From Source
@@ -15,7 +15,7 @@ deno install --allow-net --allow-read --allow-write -n imeeji jsr:imeeji
 ```bash
 git clone https://github.com/user/imeeji.git
 cd imeeji
-deno install --allow-net --allow-read --allow-write -n imeeji src/main.ts
+deno install -P -n imeeji src/main.ts
 ```
 
 ## Usage
@@ -109,29 +109,29 @@ Output:
 
 ### Prerequisites
 
-- [Deno](https://deno.land/) 2.0+
+- [Deno](https://deno.land/) 2.5+
 
 ### Run
 
 ```bash
-deno run --allow-net --allow-read --allow-write src/main.ts examples/a2.nix
+deno run -P src/main.ts examples/a2.nix
 ```
 
 ### Test
 
 ```bash
-deno test --allow-net --allow-read src/
+deno test -P src/
 ```
 
-## Permissions
+### Permissions
 
-The tool requires the following Deno permissions:
+Permissions are configured in `deno.json` and can be enabled with the `-P` flag:
 
 | Permission | Reason |
 |------------|--------|
-| `--allow-net` | Fetch tags from Docker registries |
-| `--allow-read` | Read configuration files |
-| `--allow-write` | Modify configuration files (not needed for `--dry-run`) |
+| `net` | Fetch tags from Docker registries |
+| `read` | Read configuration files |
+| `write` | Modify configuration files (not needed for `--dry-run`) |
 
 ## Supported Registries
 
