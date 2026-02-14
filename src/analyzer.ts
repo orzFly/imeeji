@@ -1,5 +1,5 @@
 import { parse as parseSemver, compare } from "@std/semver";
-import { ParsedTag, TagGroup } from "./types.ts";
+import { ParsedTag, VariantGroup } from "./types.ts";
 
 const COMMON_SUFFIXES = [
   "-alpine",
@@ -19,20 +19,25 @@ const COMMON_SUFFIXES = [
   "-nanoserver",
 ];
 
-const COMMON_PREFIXES = ["v", "release-", "stable-", "latest"];
+const COMMON_PREFIXES = [
+  "release-",
+  "stable-",
+];
+
+const PRERELEASE_PREFIXES = [
+  "rc",
+  "beta",
+  "alpha",
+  "dev",
+  "preview",
+  "canary",
+  "nightly",
+];
 
 export function parseTag(tag: string): ParsedTag {
   let remaining = tag;
   let prefix = "";
   let suffix = "";
-
-  for (const p of COMMON_PREFIXES) {
-    if (remaining.toLowerCase().startsWith(p.toLowerCase())) {
-      prefix = p;
-      remaining = remaining.slice(p.length);
-      break;
-    }
-  }
 
   for (const s of COMMON_SUFFIXES) {
     const lowerRemaining = remaining.toLowerCase();
@@ -44,8 +49,44 @@ export function parseTag(tag: string): ParsedTag {
     }
   }
 
+  for (const p of COMMON_PREFIXES) {
+    if (remaining.toLowerCase().startsWith(p.toLowerCase())) {
+      prefix = p;
+      remaining = remaining.slice(p.length);
+      break;
+    }
+  }
+
+  for (const p of PRERELEASE_PREFIXES) {
+    if (remaining.toLowerCase() === p) {
+      prefix = prefix ? `${prefix}${p}` : p;
+      remaining = "";
+      break;
+    }
+    if (remaining.toLowerCase().startsWith(`${p}-`)) {
+      prefix = prefix ? `${prefix}${p}` : p;
+      remaining = remaining.slice(p.length + 1);
+      break;
+    }
+    const lowerRemaining = remaining.toLowerCase();
+    if (lowerRemaining.startsWith(p) && /^\d/.test(remaining.slice(p.length))) {
+      prefix = prefix ? `${prefix}${p}` : p;
+      remaining = remaining.slice(p.length);
+      break;
+    }
+  }
+
+  if (remaining.toLowerCase() === "v") {
+    prefix = prefix ? `${prefix}v` : "v";
+    remaining = "";
+  } else if (remaining.toLowerCase().startsWith("v") && /^\d/.test(remaining.slice(1))) {
+    prefix = prefix ? `${prefix}v` : "v";
+    remaining = remaining.slice(1);
+  }
+
   const version = remaining;
   const semver = isValidSemver(version);
+  const isFloating = !semver && !hasNumericContent(version);
 
   return {
     original: tag,
@@ -53,7 +94,12 @@ export function parseTag(tag: string): ParsedTag {
     version,
     suffix,
     semver,
+    isFloating,
   };
+}
+
+function hasNumericContent(version: string): boolean {
+  return /\d/.test(version);
 }
 
 function isValidSemver(version: string): boolean {
@@ -106,47 +152,53 @@ function compareVersions(a: ParsedTag, b: ParsedTag): number {
   return 0;
 }
 
-export function groupTags(tags: string[]): TagGroup[] {
+export function groupByVariant(tags: string[]): VariantGroup[] {
   const parsed = tags.map(parseTag);
   const groups = new Map<string, ParsedTag[]>();
 
   for (const p of parsed) {
-    const key = `${p.prefix}|${p.suffix}`;
+    const key = p.suffix;
     if (!groups.has(key)) {
       groups.set(key, []);
     }
     groups.get(key)!.push(p);
   }
 
-  const result: TagGroup[] = [];
-  for (const [key, groupTags] of groups) {
-    const [prefix, suffix] = key.split("|");
-    const sorted = groupTags.sort(compareVersions);
-    const latest = sorted[sorted.length - 1];
+  const result: VariantGroup[] = [];
+
+  for (const [suffix, groupTags] of groups) {
+    const versioned = groupTags.filter((t) => !t.isFloating);
+    const floating = groupTags.filter((t) => t.isFloating);
+
+    versioned.sort((a, b) => compareVersions(b, a));
+
+    const latest = versioned.length > 0 ? versioned[0] : null;
+    const older = versioned.slice(1);
 
     result.push({
-      prefix,
       suffix,
-      tags: sorted,
       latest,
+      older,
+      floating,
     });
   }
 
   return result.sort((a, b) => {
-    if (a.prefix !== b.prefix) return a.prefix.localeCompare(b.prefix);
+    if (a.suffix === "" && b.suffix !== "") return -1;
+    if (a.suffix !== "" && b.suffix === "") return 1;
     return a.suffix.localeCompare(b.suffix);
   });
 }
 
-export function findMatchingGroup(
+export function findMatchingVariant(
   currentTag: string,
-  groups: TagGroup[],
-): TagGroup | null {
+  variants: VariantGroup[],
+): VariantGroup | null {
   const current = parseTag(currentTag);
 
-  for (const group of groups) {
-    if (group.prefix === current.prefix && group.suffix === current.suffix) {
-      return group;
+  for (const variant of variants) {
+    if (variant.suffix === current.suffix) {
+      return variant;
     }
   }
 
@@ -155,16 +207,21 @@ export function findMatchingGroup(
 
 export function findBestUpgrade(
   currentTag: string,
-  groups: TagGroup[],
+  variants: VariantGroup[],
 ): string | null {
-  const group = findMatchingGroup(currentTag, groups);
-  if (!group) return null;
+  const variant = findMatchingVariant(currentTag, variants);
+  if (!variant || !variant.latest) return null;
 
   const current = parseTag(currentTag);
-  const cmp = compareVersions(current, group.latest);
+
+  if (current.isFloating) {
+    return variant.latest.original;
+  }
+
+  const cmp = compareVersions(current, variant.latest);
 
   if (cmp < 0) {
-    return group.latest.original;
+    return variant.latest.original;
   }
 
   return null;

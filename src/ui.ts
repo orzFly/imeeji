@@ -1,5 +1,5 @@
-import { ImageUpdate, ImageRef, TagGroup } from "./types.ts";
-import { findMatchingGroup, parseTag } from "./analyzer.ts";
+import { ImageUpdate, ImageRef, VariantGroup } from "./types.ts";
+import { findMatchingVariant, parseTag } from "./analyzer.ts";
 
 const RESET = "\x1b[0m";
 const BOLD = "\x1b[1m";
@@ -25,6 +25,11 @@ function truncate(s: string, maxLen: number): string {
   return s.slice(0, maxLen - 3) + "...";
 }
 
+function formatVariantLabel(variant: VariantGroup): string {
+  if (variant.suffix === "") return "(default)";
+  return variant.suffix;
+}
+
 export async function selectUpdates(
   updates: ImageUpdate[],
   autoYes: boolean,
@@ -46,7 +51,7 @@ export async function selectUpdates(
     `${DIM}#   ${"Image".padEnd(nameWidth)} ${"Current".padEnd(tagWidth)} → ${"Upgrade".padEnd(tagWidth)}${RESET}`,
   );
   console.log(
-    `${DIM}─".padEnd(4)} ${"".padEnd(nameWidth, "─")} ${"".padEnd(tagWidth, "─")}   ${"".padEnd(tagWidth, "─")}${RESET}`,
+    `${DIM}${"".padEnd(4)} ${"".padEnd(nameWidth, "─")} ${"".padEnd(tagWidth, "─")}   ${"".padEnd(tagWidth, "─")}${RESET}`,
   );
 
   for (let i = 0; i < updates.length; i++) {
@@ -99,22 +104,12 @@ export async function selectUpdates(
 
   for (const idx of selectedIndices) {
     const u = updates[idx];
-
-    if (u.tagGroups.length > 1) {
-      const selectedTag = await selectTagVariant(u.image, u.currentTag, u.tagGroups);
-      if (selectedTag) {
-        results.push({
-          ...u.image,
-          tag: selectedTag,
-          full: `${u.image.registry}/${u.image.repository}:${selectedTag}`,
-          originalFull: u.image.full,
-        });
-      }
-    } else {
+    const selectedTag = await selectTagForImage(u.image, u.currentTag, u.variants, u.currentVariant);
+    if (selectedTag) {
       results.push({
         ...u.image,
-        tag: u.newTag,
-        full: `${u.image.registry}/${u.image.repository}:${u.newTag}`,
+        tag: selectedTag,
+        full: `${u.image.registry}/${u.image.repository}:${selectedTag}`,
         originalFull: u.image.full,
       });
     }
@@ -123,42 +118,134 @@ export async function selectUpdates(
   return results;
 }
 
-async function selectTagVariant(
+async function selectTagForImage(
   image: ImageRef,
   currentTag: string,
-  groups: TagGroup[],
+  variants: VariantGroup[],
+  currentVariant: VariantGroup | null,
 ): Promise<string | null> {
-  console.log(
-    `\n${BOLD}Select variant for ${formatImageName(image)}:${RESET}`,
-  );
-  console.log(`${DIM}Current: ${currentTag}${RESET}\n`);
+  let activeVariant = currentVariant;
 
-  const current = parseTag(currentTag);
-  const currentGroup = findMatchingGroup(currentTag, groups);
+  while (true) {
+    if (!activeVariant) {
+      activeVariant = await selectVariant(image, currentTag, variants, null);
+      if (!activeVariant) return null;
+    }
 
-  for (let i = 0; i < groups.length; i++) {
-    const g = groups[i];
-    const num = `${i + 1}.`.padEnd(3);
-    const prefix = g.prefix || DIM + "(none)" + RESET;
-    const suffix = g.suffix || DIM + "(none)" + RESET;
-    const latest = g.latest.original;
-    const currentMarker = g === currentGroup ? `${GREEN}*${RESET}` : " ";
-    console.log(
-      `${currentMarker}${num} prefix=${prefix.padEnd(8)} suffix=${suffix.padEnd(10)} → ${GREEN}${latest}${RESET}`,
-    );
+    const selectedTag = await selectTagInVariant(image, currentTag, activeVariant, variants);
+
+    if (selectedTag === "__OTHER_VARIANTS__") {
+      activeVariant = await selectVariant(image, currentTag, variants, activeVariant);
+      if (!activeVariant) return null;
+      continue;
+    }
+
+    return selectedTag;
+  }
+}
+
+async function selectTagInVariant(
+  image: ImageRef,
+  currentTag: string,
+  variant: VariantGroup,
+  variants: VariantGroup[],
+): Promise<string | null | "__OTHER_VARIANTS__"> {
+  console.log(`\n${BOLD}Select tag for ${formatImageName(image)}${RESET}`);
+  console.log(`${DIM}Current: ${currentTag}${RESET}`);
+  console.log(`${DIM}Variant: ${formatVariantLabel(variant)}${RESET}\n`);
+
+  const options: string[] = [];
+
+  if (variant.latest) {
+    options.push(variant.latest.original);
   }
 
-  const answer = await prompt("\nSelect variant (number, or Enter for current group): ");
+  const maxOlder = 5;
+  for (const t of variant.older.slice(0, maxOlder)) {
+    options.push(t.original);
+  }
+
+  if (variant.floating.length > 0) {
+    for (const t of variant.floating) {
+      options.push(t.original);
+    }
+  }
+
+  console.log("Recent versions:");
+  for (let i = 0; i < options.length; i++) {
+    const marker = options[i] === currentTag ? `${GREEN}*${RESET}` : " ";
+    console.log(`${marker} ${i + 1}) ${options[i]}`);
+  }
+
+  if (variants.length > 1) {
+    console.log(`\n0) ...other variants`);
+  }
+
+  const answer = await prompt("\nSelect tag (number, or Enter to skip): ");
 
   if (answer === "") {
-    return currentGroup?.latest.original ?? currentTag;
+    return null;
   }
 
   const num = parseInt(answer, 10);
-  if (num >= 1 && num <= groups.length) {
-    return groups[num - 1].latest.original;
+
+  if (num === 0 && variants.length > 1) {
+    return "__OTHER_VARIANTS__";
   }
 
-  console.log("Invalid selection, keeping current tag.");
+  if (num >= 1 && num <= options.length) {
+    return options[num - 1];
+  }
+
+  console.log("Invalid selection.");
+  return null;
+}
+
+async function selectVariant(
+  image: ImageRef,
+  currentTag: string,
+  variants: VariantGroup[],
+  currentVariant: VariantGroup | null,
+): Promise<VariantGroup | null> {
+  console.log(`\n${BOLD}Select variant for ${formatImageName(image)}:${RESET}`);
+  console.log(`${DIM}Current: ${currentTag}${RESET}\n`);
+
+  for (let i = 0; i < variants.length; i++) {
+    const v = variants[i];
+    const num = `${i + 1}.`.padEnd(3);
+    const label = formatVariantLabel(v);
+    const currentMarker = v === currentVariant ? `${GREEN}*${RESET}` : " ";
+
+    let line = `${currentMarker}${num} ${label.padEnd(15)}`;
+
+    if (v.latest) {
+      line += ` ${GREEN}${v.latest.original}${RESET}`;
+    }
+
+    if (v.older.length > 0) {
+      const olderPreview = v.older.slice(0, 3).map((t) => t.original).join("  ");
+      line += `\n     ${DIM}${olderPreview}${RESET}`;
+    }
+
+    if (v.floating.length > 0) {
+      const floatingPreview = v.floating.slice(0, 2).map((t) => t.original).join(", ");
+      line += `\n     ${DIM}(${floatingPreview})${RESET}`;
+    }
+
+    console.log(line);
+  }
+
+  const answer = await prompt("\nSelect variant (number, or Enter to cancel): ");
+
+  if (answer === "") {
+    return null;
+  }
+
+  const num = parseInt(answer, 10);
+  if (num >= 1 && num <= variants.length) {
+    return variants[num - 1];
+  }
+
+  console.log("Invalid selection.");
   return null;
 }

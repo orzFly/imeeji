@@ -1,7 +1,7 @@
 import { parseArgs } from "@std/cli/parse-args";
 import { findImages } from "./parser.ts";
 import { fetchTags, getRepositoryKey } from "./registry.ts";
-import { groupTags, findBestUpgrade } from "./analyzer.ts";
+import { groupByVariant, findBestUpgrade, findMatchingVariant } from "./analyzer.ts";
 import { selectUpdates } from "./ui.ts";
 import { generateDiff, applyUpdates as applyPatches } from "./patcher.ts";
 import { ImageUpdate } from "./types.ts";
@@ -103,15 +103,16 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const groups = groupTags(tags);
-    const newTag = findBestUpgrade(image.tag, groups);
+    const variants = groupByVariant(tags);
+    const newTag = findBestUpgrade(image.tag, variants);
 
     if (newTag) {
       updates.push({
         image,
         currentTag: image.tag,
         newTag,
-        tagGroups: groups,
+        variants,
+        currentVariant: findMatchingVariant(image.tag, variants),
       });
     }
   }

@@ -16,18 +16,20 @@ export interface ParsedTag {
   version: string;
   suffix: string;
   semver: boolean;
+  isFloating: boolean;
 }
 
-export interface TagGroup {
-  prefix: string;
+export interface VariantGroup {
   suffix: string;
-  tags: ParsedTag[];
-  latest: ParsedTag;
+  latest: ParsedTag | null;
+  older: ParsedTag[];
+  floating: ParsedTag[];
 }
 
 export interface ImageUpdate {
   image: ImageRef;
   currentTag: string;
   newTag: string;
-  tagGroups: TagGroup[];
+  variants: VariantGroup[];
+  currentVariant: VariantGroup | null;
 }
