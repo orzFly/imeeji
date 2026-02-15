@@ -9,7 +9,7 @@ imeeji is an interactive Docker image upgrade tool. It scans files for Docker im
 ## Tech Stack
 
 - Deno 2.x with TypeScript
-- React 18 + Ink 5 for TUI
+- React 19 + Ink 6 for TUI
 - No external test framework (uses Deno's built-in test runner)
 
 ## Commands
@@ -34,10 +34,10 @@ deno cache npm:package-name
 
 For JSX projects, you must add both React and the JSX runtime:
 ```bash
-deno add npm:react@18 npm:react@18/jsx-runtime
+deno add npm:react@19 npm:react@19/jsx-runtime
 ```
 
-Note: Use React 18 for compatibility with Ink 5 (which has a peer dependency on React ^18.3.1).
+Note: Use React 19 for compatibility with Ink 6 (which has a peer dependency on React ^19).
 
 ## Code Style
 

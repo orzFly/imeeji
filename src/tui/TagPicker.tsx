@@ -6,6 +6,8 @@ import { useTerminalSize } from "./useTerminalSize.ts";
 import { TitleBar } from "./TitleBar.tsx";
 import { ControlBar } from "./ControlBar.tsx";
 import { formatVariantLabel } from "./format.ts";
+import { getTagUrl } from "./tagUrl.ts";
+import { Link } from "./Link.tsx";
 
 interface TagPickerProps {
   update: ImageUpdate;
@@ -102,6 +104,8 @@ export function TagPicker({
         const idx = visibleRange.start + relIdx;
         const isHighlighted = idx === cursor;
         const isCurrent = tag === update.currentTag;
+        const tagUrl = getTagUrl(update.image.registry, update.image.repository, tag);
+        const suffix = `${isCurrent ? "*" : ""}${idx === 0 && variant.latest && tag === variant.latest.original ? " (latest)" : ""}`;
 
         return (
           <Box key={tag}>
@@ -110,11 +114,19 @@ export function TagPicker({
               bold={isHighlighted}
             >
               {isHighlighted ? "> " : "  "}
+            </Text>
+            <Link
+              url={tagUrl}
+              color={isHighlighted ? "cyan" : undefined}
+              bold={isHighlighted}
+            >
               {tag}
-              {isCurrent ? "*" : ""}
-              {idx === 0 && variant.latest && tag === variant.latest.original
-                ? " (latest)"
-                : ""}
+            </Link>
+            <Text
+              color={isHighlighted ? "cyan" : undefined}
+              bold={isHighlighted}
+            >
+              {suffix}
             </Text>
           </Box>
         );

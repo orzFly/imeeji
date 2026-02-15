@@ -6,6 +6,8 @@ import { useTerminalSize } from "./useTerminalSize.ts";
 import { TitleBar } from "./TitleBar.tsx";
 import { ControlBar } from "./ControlBar.tsx";
 import { formatImageName, truncate } from "./format.ts";
+import { getTagUrl } from "./tagUrl.ts";
+import { Link } from "./Link.tsx";
 
 interface UpdateListProps {
   updates: ImageUpdate[];
@@ -124,9 +126,13 @@ export function UpdateList({
               <Text dimColor> {location}</Text>
             </Box>
             <Box marginLeft={4}>
-              <Text dimColor>{truncate(u.currentTag, tagMax)}</Text>
+              <Link url={getTagUrl(u.image.registry, u.image.repository, u.currentTag)} dimColor>
+                {truncate(u.currentTag, tagMax)}
+              </Link>
               <Text dimColor> → </Text>
-              <Text color="green">{truncate(displayTag, tagMax)}</Text>
+              <Link url={getTagUrl(u.image.registry, u.image.repository, displayTag)} color="green">
+                {truncate(displayTag, tagMax)}
+              </Link>
             </Box>
           </Box>
         );
