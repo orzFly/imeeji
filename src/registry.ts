@@ -40,7 +40,7 @@ async function getDockerHubToken(repository: string): Promise<string | null> {
 }
 
 export function parseWwwAuthenticate(header: string): AuthChallenge | null {
-  if (!header.startsWith("Bearer ")) return null;
+  if (header.length < 7 || header.slice(0, 7).toLowerCase() !== "bearer ") return null;
   const params = header.slice(7);
   if (!params) return null;
 

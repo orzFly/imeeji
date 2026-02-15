@@ -24,3 +24,12 @@ Deno.test("parseWwwAuthenticate - handles realm-only challenge", () => {
     realm: "https://auth.example.com/token",
   });
 });
+
+Deno.test("parseWwwAuthenticate - case-insensitive scheme", () => {
+  const header = 'bearer realm="https://auth.example.com/token",service="r.io"';
+  assertEquals(parseWwwAuthenticate(header)?.realm, "https://auth.example.com/token");
+  assertEquals(parseWwwAuthenticate(header)?.service, "r.io");
+
+  const upper = 'BEARER realm="https://auth.example.com/token"';
+  assertEquals(parseWwwAuthenticate(upper)?.realm, "https://auth.example.com/token");
+});
