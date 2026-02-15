@@ -11,6 +11,7 @@ import { applyUpdates as applyPatches, generateDiff } from "./patcher.ts";
 import type { ImageUpdate, TagFetchResult } from "./types.ts";
 import { mapPool } from "./pool.ts";
 import { fetchLsioMetadata, getLsioFloatingTags, isLinuxServerRepo } from "./integrations/lsio.ts";
+import { parseImageRef, runAdhocMode } from "./adhoc.ts";
 
 const VERSION = "0.1.0";
 
@@ -20,17 +21,24 @@ imeeji - Interactive Docker Image Upgrade Tool
 
 USAGE:
   imeeji [OPTIONS] <FILE>
+  imeeji [OPTIONS] <IMAGE>       # Ad-hoc mode: select version for image
 
 OPTIONS:
-  -n, --dry-run    Print diff without modifying file
+  -n, --dry-run    Print diff without modifying file (file mode)
   -y, --yes        Auto-accept latest versions (non-interactive)
   -h, --help       Print this help message
   -V, --version    Print version
 
-EXAMPLES:
+FILE MODE EXAMPLES:
   imeeji config.nix              Interactive upgrade
   imeeji --dry-run config.nix    Preview changes only
   imeeji -y config.nix           Auto-upgrade all to latest
+
+AD-HOC MODE EXAMPLES:
+  imeeji nginx                   Select version/variant for nginx
+  imeeji nginx:alpine            Select alpine version for nginx
+  imeeji -y nginx                Output latest nginx image
+  imeeji -y nginx:alpine         Output latest nginx:alpine image
 `);
 }
 
@@ -56,25 +64,30 @@ async function main(): Promise<void> {
     Deno.exit(0);
   }
 
-  const file = parsed._[0]?.toString() ?? null;
+  const arg = parsed._[0]?.toString() ?? null;
 
-  if (!file) {
-    console.error("Error: No file specified");
+  if (!arg) {
+    console.error("Error: No file or image specified");
     printHelp();
     Deno.exit(1);
   }
 
-  const filePath = file;
+  const filePath = arg;
   const dryRun = parsed["dry-run"] ?? false;
   const autoYes = parsed.yes ?? false;
 
   let content: string;
   try {
     content = await Deno.readTextFile(filePath);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error(`Error reading file ${filePath}: ${msg}`);
-    Deno.exit(1);
+  } catch {
+    const parsedImage = parseImageRef(arg);
+    const result = await runAdhocMode(parsedImage, autoYes);
+    if (result) {
+      console.log(result);
+    } else {
+      Deno.exit(1);
+    }
+    return;
   }
 
   const images = findImages(content);
