@@ -127,7 +127,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const selectedUpdates = await selectUpdates(updates, autoYes);
+  const selectedUpdates = await selectUpdates(updates, autoYes, filePath, content);
 
   if (selectedUpdates.length === 0) {
     console.log("No updates applied.");
