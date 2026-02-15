@@ -3,7 +3,7 @@ import type { ParsedTag, VariantGroup } from "./types.ts";
 
 const JAVA_STYLE_REGEX = /^(\d+u\d+(?:-b\d+)?)(?:-(.+))?$/;
 const STANDARD_VERSION_REGEX =
-  /^(\d+(?:[._]\d+)*(?:-(?:rc|beta|alpha|dev|preview|canary|nightly)\d*)?(?:-\d+)*)(?:-(.+))?$/i;
+  /^(\d+(?:[._]\d+)*(?:-(?:(?:rc|beta|alpha|dev|preview|canary|nightly)\d*|m\d+))?(?:-\d+)*(?:-[a-z][0-9a-f]+)?)(?:-(.+))?$/i;
 
 export function parseTag(tag: string): ParsedTag {
   let remaining = tag;
@@ -113,6 +113,18 @@ function compareVersions(a: ParsedTag, b: ParsedTag): number {
       const cmp = partA.localeCompare(partB);
       if (cmp !== 0) return cmp;
     }
+  }
+
+  const preReleaseRegex = /-(?:rc|beta|alpha|dev|preview|canary|nightly|m)(\d*)/i;
+  const preA = a.version.match(preReleaseRegex);
+  const preB = b.version.match(preReleaseRegex);
+
+  if (preA && !preB) return -1;
+  if (!preA && preB) return 1;
+  if (preA && preB) {
+    const numA = preA[1] ? parseInt(preA[1], 10) : 0;
+    const numB = preB[1] ? parseInt(preB[1], 10) : 0;
+    if (numA !== numB) return numA - numB;
   }
 
   return 0;

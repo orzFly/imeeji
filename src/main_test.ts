@@ -480,3 +480,106 @@ Deno.test("findImages extracts docker images", () => {
   assertEquals(images[0].repository, "library/postgres");
   assertEquals(images[0].tag, "18.1-alpine");
 });
+
+Deno.test("parseTag - milestone M02 no suffix", () => {
+  const result = parseTag("8.0-M02");
+  assertEquals(result.version, "8.0-M02");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - milestone M02 with alpine suffix", () => {
+  const result = parseTag("8.0-M02-alpine");
+  assertEquals(result.version, "8.0-M02");
+  assertEquals(result.suffix, "alpine");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - milestone M02 with alpine3.21 suffix", () => {
+  const result = parseTag("8.0-M02-alpine3.21");
+  assertEquals(result.version, "8.0-M02");
+  assertEquals(result.suffix, "alpine3.21");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - milestone M02 with bookworm suffix", () => {
+  const result = parseTag("8.0-M02-bookworm");
+  assertEquals(result.version, "8.0-M02");
+  assertEquals(result.suffix, "bookworm");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - milestone M1 no suffix", () => {
+  const result = parseTag("5.0-M1");
+  assertEquals(result.version, "5.0-M1");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - git hash no suffix", () => {
+  const result = parseTag("1.2.3-35-g3a810da");
+  assertEquals(result.version, "1.2.3-35-g3a810da");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - git hash with alpine suffix", () => {
+  const result = parseTag("1.2.3-35-g3a810da-alpine");
+  assertEquals(result.version, "1.2.3-35-g3a810da");
+  assertEquals(result.suffix, "alpine");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - git hash only", () => {
+  const result = parseTag("1.2.3-a1b2c3d4");
+  assertEquals(result.version, "1.2.3-a1b2c3d4");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - minimal suffix not hex", () => {
+  const result = parseTag("8.0-minimal");
+  assertEquals(result.version, "8.0");
+  assertEquals(result.suffix, "minimal");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - alpine suffix not hex", () => {
+  const result = parseTag("1.2.3-alpine");
+  assertEquals(result.version, "1.2.3");
+  assertEquals(result.suffix, "alpine");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("groupByVariant - milestone tags merge into correct variant", () => {
+  const tags = ["8.0-M02-alpine", "8.0-M01-alpine"];
+  const variants = groupByVariant(tags);
+  const alpine = variants.find((v) => v.suffix === "alpine");
+  assertEquals(alpine?.latest?.original, "8.0-M02-alpine");
+  assertEquals(alpine?.older.length, 1);
+  assertEquals(alpine?.older[0].original, "8.0-M01-alpine");
+});
+
+Deno.test("findBestUpgrade - milestone upgrade", () => {
+  const tags = ["8.0-M02-alpine", "8.0-M01-alpine"];
+  const variants = groupByVariant(tags);
+  const result = findBestUpgrade("8.0-M01-alpine", variants);
+  assertEquals(result, "8.0-M02-alpine");
+});
+
+Deno.test("findBestUpgrade - rc1 to stable", () => {
+  const tags = ["1.0.0", "1.0.0-rc1"];
+  const variants = groupByVariant(tags);
+  const result = findBestUpgrade("1.0.0-rc1", variants);
+  assertEquals(result, "1.0.0");
+});
+
+Deno.test("groupByVariant - stable sorts above milestone", () => {
+  const tags = ["8.0", "8.0-M02", "8.0-M01"];
+  const variants = groupByVariant(tags);
+  const defaultVariant = variants.find((v) => v.suffix === "");
+  assertEquals(defaultVariant?.latest?.original, "8.0");
+  assertEquals(defaultVariant?.older.length, 2);
+  assertEquals(defaultVariant?.older[0].original, "8.0-M02");
+  assertEquals(defaultVariant?.older[1].original, "8.0-M01");
+});
