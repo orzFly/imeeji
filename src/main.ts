@@ -10,7 +10,7 @@ import { selectUpdates } from "./ui.ts";
 import { applyUpdates as applyPatches, generateDiff } from "./patcher.ts";
 import type { ImageUpdate, TagFetchResult } from "./types.ts";
 import { mapPool } from "./pool.ts";
-import { fetchLsioMetadata, isLinuxServerRepo } from "./lsio.ts";
+import { fetchLsioMetadata, getLsioFloatingTags, isLinuxServerRepo } from "./lsio.ts";
 
 const VERSION = "0.1.0";
 
@@ -125,18 +125,21 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const variants = groupByVariant(tags, result?.digestMap, image.repository);
+    const repoKey = `linuxserver/${image.repository.replace("linuxserver/", "")}`;
+    const lsioMeta = lsioMetadata?.get(repoKey);
+    const floatingTags = lsioMeta ? getLsioFloatingTags(lsioMeta) : undefined;
+
+    const variants = groupByVariant(tags, result?.digestMap, floatingTags);
     const newTag = findBestUpgrade(image.tag, variants);
 
     if (newTag) {
-      const repoKey = `linuxserver/${image.repository.replace("linuxserver/", "")}`;
       updates.push({
         image,
         currentTag: image.tag,
         newTag,
         variants,
         currentVariant: findMatchingVariant(image.tag, variants),
-        lsioMetadata: lsioMetadata?.get(repoKey),
+        lsioMetadata: lsioMeta,
       });
     }
   }

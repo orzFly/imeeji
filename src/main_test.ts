@@ -790,7 +790,8 @@ Deno.test("findBestUpgrade - git hash build", () => {
 
 Deno.test("groupByVariant - lsio v4 as floating", () => {
   const tags = ["v4", "4.0.0"];
-  const variants = groupByVariant(tags, undefined, "linuxserver/emby");
+  const floatingTags = new Set(["v4"]);
+  const variants = groupByVariant(tags, undefined, floatingTags);
   const defaultVariant = variants.find((v) => v.prefix === "" && v.suffix === "");
   assertEquals(defaultVariant?.latest?.original, "4.0.0");
   assertEquals(defaultVariant?.floating.length, 1);
@@ -799,7 +800,8 @@ Deno.test("groupByVariant - lsio v4 as floating", () => {
 
 Deno.test("groupByVariant - lsio develop nightly floating", () => {
   const tags = ["develop", "nightly", "3.0.0"];
-  const variants = groupByVariant(tags, undefined, "linuxserver/plex");
+  const floatingTags = new Set(["develop", "nightly"]);
+  const variants = groupByVariant(tags, undefined, floatingTags);
   const defaultVariant = variants.find((v) => v.prefix === "" && v.suffix === "");
   assertEquals(defaultVariant?.latest?.original, "3.0.0");
   assertEquals(defaultVariant?.floating.length, 2);
@@ -810,7 +812,7 @@ Deno.test("groupByVariant - lsio develop nightly floating", () => {
 
 Deno.test("groupByVariant - non-lsio v4 versioned", () => {
   const tags = ["v4", "v3"];
-  const variants = groupByVariant(tags, undefined, "library/nginx");
+  const variants = groupByVariant(tags);
   const vVariant = variants.find((v) => v.prefix === "v" && v.suffix === "");
   assertEquals(vVariant?.latest?.original, "v4");
   assertEquals(vVariant?.older.length, 1);

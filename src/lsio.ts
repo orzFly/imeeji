@@ -1,35 +1,3 @@
-export const LSIO_FLOATING_TAGS = new Set([
-  "latest",
-  "develop",
-  "gpu",
-  "alpine-kde",
-  "alpine-mate",
-  "alpine-xfce",
-  "alpine-znc",
-  "web",
-  "stable",
-  "nightly",
-  "master",
-  "main",
-  "edge",
-  "test",
-  "testing",
-  "beta",
-  "alpha",
-  "dev",
-  "rc",
-  "v4",
-  "v3",
-  "v2",
-  "v1",
-  "amd64",
-  "arm64",
-  "arm32v7",
-  "x86",
-  "legacy",
-  "minimal",
-]);
-
 export function isLinuxServerRepo(repository: string): boolean {
   return repository.startsWith("linuxserver/");
 }
@@ -41,9 +9,12 @@ export interface LsioChangelogEntry {
 }
 
 export interface LsioTag {
-  name: string;
-  description: string;
-  deprecated: boolean;
+  tag: string;
+  desc: string;
+}
+
+export function getLsioFloatingTags(metadata: LsioImageMetadata): Set<string> {
+  return new Set(metadata.tags.map((t) => t.tag.toLowerCase()));
 }
 
 export interface LsioImageMetadata {

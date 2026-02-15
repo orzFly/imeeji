@@ -1,6 +1,5 @@
 import { compare, parse as parseSemver } from "@std/semver";
 import type { ParsedTag, VariantGroup } from "./types.ts";
-import { isLinuxServerRepo, LSIO_FLOATING_TAGS } from "./lsio.ts";
 
 const JAVA_STYLE_REGEX = /^(\d+u\d+(?:-b\d+)?)(?:-(.+))?$/;
 const STANDARD_VERSION_REGEX =
@@ -268,7 +267,7 @@ function reparseWithSuffixInference(parsed: ParsedTag[]): ParsedTag[] {
 export function groupByVariant(
   tags: string[],
   digestMap?: Map<string, string>,
-  repository?: string,
+  floatingTagOverrides?: Set<string>,
 ): VariantGroup[] {
   let parsed = tags.map(parseTag);
 
@@ -277,9 +276,9 @@ export function groupByVariant(
   }
   parsed = reparseWithSuffixInference(parsed);
 
-  if (repository && isLinuxServerRepo(repository)) {
+  if (floatingTagOverrides) {
     for (let i = 0; i < parsed.length; i++) {
-      if (LSIO_FLOATING_TAGS.has(parsed[i].original.toLowerCase())) {
+      if (floatingTagOverrides.has(parsed[i].original.toLowerCase())) {
         parsed[i] = { ...parsed[i], isFloating: true };
       }
     }
