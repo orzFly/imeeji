@@ -9,6 +9,7 @@ import {
 import { selectUpdates } from "./ui.ts";
 import { applyUpdates as applyPatches, generateDiff } from "./patcher.ts";
 import type { ImageUpdate, TagFetchResult } from "./types.ts";
+import { mapPool } from "./pool.ts";
 
 const VERSION = "0.1.0";
 
@@ -84,16 +85,25 @@ async function main(): Promise<void> {
 
   console.log(`Found ${images.length} image(s) in ${filePath}`);
 
-  const repoCache = new Map<string, TagFetchResult>();
+  const uniqueEntries = Array.from(
+    new Map(
+      images.map((img) => [
+        getRepositoryKey(img.registry, img.repository),
+        img,
+      ]),
+    ).entries(),
+  );
 
-  for (const image of images) {
-    const key = getRepositoryKey(image.registry, image.repository);
-    if (!repoCache.has(key)) {
-      console.log(`Fetching tags for ${key}...`);
-      const result = await fetchTagsEnriched(image.registry, image.repository);
-      repoCache.set(key, result);
-      await new Promise((r) => setTimeout(r, 100));
-    }
+  uniqueEntries.forEach(([key]) => console.log(`Fetching tags for ${key}...`));
+
+  const results = await mapPool(uniqueEntries, 8, async ([key, image]) => {
+    const result = await fetchTagsEnriched(image.registry, image.repository);
+    return { key, result };
+  });
+
+  const repoCache = new Map<string, TagFetchResult>();
+  for (const { key, result } of results) {
+    repoCache.set(key, result);
   }
 
   const updates: ImageUpdate[] = [];

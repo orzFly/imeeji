@@ -1,3 +1,9 @@
+export interface AuthChallenge {
+  realm: string;
+  service?: string;
+  scope?: string;
+}
+
 const REGISTRY_ALIASES: Record<string, string> = {
   "docker.io": "registry.hub.docker.com",
 };
@@ -28,6 +34,41 @@ async function getDockerHubToken(repository: string): Promise<string | null> {
     if (!response.ok) return null;
     const data = await response.json();
     return data.token;
+  } catch {
+    return null;
+  }
+}
+
+export function parseWwwAuthenticate(header: string): AuthChallenge | null {
+  if (!header.startsWith("Bearer ")) return null;
+  const params = header.slice(7);
+  if (!params) return null;
+
+  const result: AuthChallenge = { realm: "" };
+  const realmMatch = params.match(/realm="([^"]+)"/);
+  const serviceMatch = params.match(/service="([^"]+)"/);
+  const scopeMatch = params.match(/scope="([^"]+)"/);
+
+  if (!realmMatch) return null;
+  result.realm = realmMatch[1];
+  if (serviceMatch) result.service = serviceMatch[1];
+  if (scopeMatch) result.scope = scopeMatch[1];
+
+  return result;
+}
+
+async function requestOciToken(challenge: AuthChallenge): Promise<string | null> {
+  let url = challenge.realm;
+  const params = new URLSearchParams();
+  if (challenge.service) params.set("service", challenge.service);
+  if (challenge.scope) params.set("scope", challenge.scope);
+  if (params.toString()) url += `?${params.toString()}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.token ?? data.access_token ?? null;
   } catch {
     return null;
   }
@@ -85,6 +126,18 @@ export async function fetchTags(
       if (response.status === 404) {
         console.error(`Repository not found: ${registry}/${repository}`);
       } else if (response.status === 401 || response.status === 403) {
+        if (!token) {
+          const wwwAuth = response.headers.get("WWW-Authenticate");
+          const challenge = wwwAuth ? parseWwwAuthenticate(wwwAuth) : null;
+          if (challenge) {
+            const newToken = await requestOciToken(challenge);
+            if (newToken) {
+              token = newToken;
+              seenUrls.delete(url!);
+              continue;
+            }
+          }
+        }
         console.error(
           `Authentication required for ${registry}/${repository}. Skipping.`,
         );
