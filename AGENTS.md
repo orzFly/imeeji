@@ -156,7 +156,8 @@ Run with `deno task test` (which runs `deno test -P src/`).
    nix run nixpkgs#deno -- run -A dist/imeeji.js --version
    nix run nixpkgs#bun -- dist/imeeji.js --version
    ```
-4. Commit with a co-author trailer using the full model name. For example:
+4. Commit with a single co-author trailer for the model you are. For example:
    ```
    Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+   Co-Authored-By: GLM 5 <noreply@zhipuai.cn>
    ```
