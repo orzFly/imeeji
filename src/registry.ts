@@ -78,6 +78,7 @@ async function fetchOciTags(
 
   let url: string | null = `https://${host}/v2/${repository}/tags/list`;
   const seenUrls = new Set<string>();
+  let hasOverriddenN = false;
 
   while (url && !seenUrls.has(url)) {
     seenUrls.add(url);
@@ -129,7 +130,15 @@ async function fetchOciTags(
     if (linkHeader) {
       const match = linkHeader.match(/<([^>]+)>/);
       if (match) {
-        const nextUrl = match[1];
+        let nextUrl = match[1];
+        if (!hasOverriddenN) {
+          const parsed = new URL(
+            nextUrl.startsWith("http") ? nextUrl : `https://${host}${nextUrl}`,
+          );
+          parsed.searchParams.set("n", "10000");
+          nextUrl = parsed.toString();
+          hasOverriddenN = true;
+        }
         url = nextUrl.startsWith("http")
           ? nextUrl
           : `https://${host}${nextUrl}`;
