@@ -1,3 +1,5 @@
+import { myFetch } from "./fetch.ts";
+
 export function isLinuxServerRepo(repository: string): boolean {
   return repository.startsWith("linuxserver/");
 }
@@ -28,7 +30,7 @@ const LSIO_API_URL = "https://api.linuxserver.io/api/v1/images";
 
 export async function fetchLsioMetadata(): Promise<Map<string, LsioImageMetadata> | null> {
   try {
-    const response = await fetch(LSIO_API_URL);
+    const response = await myFetch(LSIO_API_URL);
     if (!response.ok) return null;
     const data = await response.json();
     const map = new Map<string, LsioImageMetadata>();

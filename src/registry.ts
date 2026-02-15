@@ -1,3 +1,5 @@
+import { myFetch } from "./fetch.ts";
+
 export interface AuthChallenge {
   realm: string;
   service?: string;
@@ -30,7 +32,7 @@ async function getDockerHubToken(repository: string): Promise<string | null> {
   const authUrl =
     `https://auth.docker.io/token?service=registry.docker.io&scope=repository:${repository}:pull`;
   try {
-    const response = await fetch(authUrl);
+    const response = await myFetch(authUrl);
     if (!response.ok) return null;
     const data = await response.json();
     return data.token;
@@ -65,7 +67,7 @@ async function requestOciToken(challenge: AuthChallenge): Promise<string | null>
   if (params.toString()) url += `?${params.toString()}`;
 
   try {
-    const response = await fetch(url);
+    const response = await myFetch(url);
     if (!response.ok) return null;
     const data = await response.json();
     return data.token ?? data.access_token ?? null;
@@ -84,7 +86,7 @@ function fetchWithAuth(
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
-  return fetch(url, { headers });
+  return myFetch(url, { headers });
 }
 
 export async function fetchTags(
@@ -198,7 +200,7 @@ async function fetchDockerHubTagsWithDigests(
     `https://hub.docker.com/v2/namespaces/${namespace}/repositories/${repo}/tags?page_size=100`;
 
   try {
-    const response = await fetch(url);
+    const response = await myFetch(url);
     if (!response.ok) return digestMap;
 
     const data: DockerHubTagsResponse = await response.json();
