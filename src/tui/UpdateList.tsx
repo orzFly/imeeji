@@ -38,7 +38,7 @@ export function UpdateList({
   onConfirm,
   onQuit,
 }: UpdateListProps) {
-  const { rows } = useTerminalSize();
+  const { rows, columns } = useTerminalSize();
   const viewportItems = Math.max(1, Math.floor((rows - 6) / 3));
 
   const scrollOffset = useMemo(() => {
@@ -67,11 +67,6 @@ export function UpdateList({
       onQuit();
     }
   });
-
-  const nameWidth = Math.max(
-    ...updates.map((u) => formatImageName(u.image).length),
-    30,
-  );
 
   const visibleUpdates = updates.slice(scrollOffset, scrollOffset + viewportItems);
   const aboveCount = scrollOffset;
@@ -105,26 +100,30 @@ export function UpdateList({
         const isHighlighted = idx === cursor;
         const displayTag = overrides.get(idx) ?? u.newTag;
         const location = `${filePath}:${u.image.line}`;
+        const prefix = isHighlighted ? "> " : "  ";
+        const checkbox = `[${isSelected ? "x" : " "}] ${idx + 1}. `;
+        const prefixLen = prefix.length + checkbox.length;
+        const locationLen = location.length + 1;
+        const imageNameMax = Math.max(20, columns - prefixLen - locationLen);
+        const tagMax = Math.max(20, Math.floor((columns - 8) / 2));
 
         return (
-          <Box key={idx} marginBottom={1}>
-            <Box width={nameWidth + 10} flexDirection="column">
-              <Box>
-                <Text
-                  color={isHighlighted ? "cyan" : undefined}
-                  bold={isHighlighted}
-                >
-                  {isHighlighted ? "> " : "  "}
-                  [{isSelected ? "x" : " "}] {idx + 1}.{" "}
-                  {truncate(formatImageName(u.image), nameWidth)}
-                </Text>
-                <Text dimColor> {location}</Text>
-              </Box>
-              <Box marginLeft={4}>
-                <Text dimColor>{truncate(u.currentTag, 20)}</Text>
-                <Text dimColor> → </Text>
-                <Text color="green">{truncate(displayTag, 20)}</Text>
-              </Box>
+          <Box key={idx} marginBottom={1} flexDirection="column">
+            <Box>
+              <Text
+                color={isHighlighted ? "cyan" : undefined}
+                bold={isHighlighted}
+              >
+                {prefix}
+                {checkbox}
+                {truncate(formatImageName(u.image), imageNameMax)}
+              </Text>
+              <Text dimColor> {location}</Text>
+            </Box>
+            <Box marginLeft={4}>
+              <Text dimColor>{truncate(u.currentTag, tagMax)}</Text>
+              <Text dimColor> → </Text>
+              <Text color="green">{truncate(displayTag, tagMax)}</Text>
             </Box>
           </Box>
         );
