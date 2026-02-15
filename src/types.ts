@@ -1,3 +1,5 @@
+import type { LsioImageMetadata } from "./lsio.ts";
+
 export interface ImageRef {
   full: string;
   registry: string;
@@ -33,6 +35,7 @@ export interface ImageUpdate {
   newTag: string;
   variants: VariantGroup[];
   currentVariant: VariantGroup | null;
+  lsioMetadata?: LsioImageMetadata;
 }
 
 export interface TagFetchResult {

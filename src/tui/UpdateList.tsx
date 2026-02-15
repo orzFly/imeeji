@@ -118,6 +118,9 @@ export function UpdateList({
                 {checkbox}
                 {truncate(formatImageName(u.image), imageNameMax)}
               </Text>
+              {u.lsioMetadata?.deprecated && (
+                <Text color="red" bold> DEPRECATED</Text>
+              )}
               <Text dimColor> {location}</Text>
             </Box>
             <Box marginLeft={4}>

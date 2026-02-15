@@ -1,10 +1,12 @@
 import { compare, parse as parseSemver } from "@std/semver";
 import type { ParsedTag, VariantGroup } from "./types.ts";
+import { isLinuxServerRepo, LSIO_FLOATING_TAGS } from "./lsio.ts";
 
 const JAVA_STYLE_REGEX = /^(\d+u\d+(?:-b\d+)?)(?:-(.+))?$/;
 const STANDARD_VERSION_REGEX =
   /^(\d+(?:[._]\d+)*(?:-(?:(?:rc|beta|alpha|dev|preview|canary|nightly)\d*|m\d+))?(?:-\d+)*(?:-[a-z][0-9a-f]+)?(?:-[a-z]{1,2}\d+)?)(?:-(.+))?$/i;
 const ARCH_PREFIX_REGEX = /^(amd64|arm64v8|arm32v[567]|i386|s390x|ppc64le|riscv64|mips64le)-/i;
+const GIT_HASH_BUILD_REGEX = /^([0-9a-f]{7,8})-([a-z]{1,2})(\d+)$/i;
 
 export function parseTag(tag: string): ParsedTag {
   let remaining = tag;
@@ -29,6 +31,18 @@ export function parseTag(tag: string): ParsedTag {
   ) {
     prefix += "v";
     remaining = remaining.slice(1);
+  }
+
+  const hashBuildMatch = remaining.match(GIT_HASH_BUILD_REGEX);
+  if (hashBuildMatch) {
+    return {
+      original: tag,
+      prefix,
+      version: remaining,
+      suffix: "",
+      semver: false,
+      isFloating: false,
+    };
   }
 
   if (!remaining || !/^\d/.test(remaining)) {
@@ -91,6 +105,16 @@ function isValidSemver(version: string): boolean {
 }
 
 function compareVersions(a: ParsedTag, b: ParsedTag): number {
+  const hashA = a.version.match(GIT_HASH_BUILD_REGEX);
+  const hashB = b.version.match(GIT_HASH_BUILD_REGEX);
+  if (hashA && hashB) {
+    if (hashA[2].toLowerCase() === hashB[2].toLowerCase()) {
+      return parseInt(hashA[3], 10) - parseInt(hashB[3], 10);
+    }
+    return 0;
+  }
+  if (hashA || hashB) return 0;
+
   if (a.semver && b.semver) {
     try {
       const semverA = parseSemver(a.version);
@@ -244,6 +268,7 @@ function reparseWithSuffixInference(parsed: ParsedTag[]): ParsedTag[] {
 export function groupByVariant(
   tags: string[],
   digestMap?: Map<string, string>,
+  repository?: string,
 ): VariantGroup[] {
   let parsed = tags.map(parseTag);
 
@@ -251,6 +276,14 @@ export function groupByVariant(
     parsed = reparseWithDigests(parsed, digestMap);
   }
   parsed = reparseWithSuffixInference(parsed);
+
+  if (repository && isLinuxServerRepo(repository)) {
+    for (let i = 0; i < parsed.length; i++) {
+      if (LSIO_FLOATING_TAGS.has(parsed[i].original.toLowerCase())) {
+        parsed[i] = { ...parsed[i], isFloating: true };
+      }
+    }
+  }
 
   const versionedGroups = new Map<string, ParsedTag[]>();
   for (const p of parsed) {

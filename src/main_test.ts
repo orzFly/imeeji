@@ -748,3 +748,73 @@ Deno.test("findMatchingVariant - prefix+suffix match", () => {
   assertEquals(noPrefixMatch?.suffix, "alpine");
 });
 
+Deno.test("parseTag - git hash build ls37", () => {
+  const result = parseTag("b3d6b63f-ls37");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "b3d6b63f-ls37");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - git hash build ig94", () => {
+  const result = parseTag("289c0610-ig94");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "289c0610-ig94");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - git hash build with arch prefix", () => {
+  const result = parseTag("amd64-a1b2c3d4-ls50");
+  assertEquals(result.prefix, "amd64-");
+  assertEquals(result.version, "a1b2c3d4-ls50");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("groupByVariant - git hash build tags", () => {
+  const tags = ["b3d6b63f-ls37", "a1c2d3e4-ls45", "latest"];
+  const variants = groupByVariant(tags);
+  const defaultVariant = variants.find((v) => v.prefix === "" && v.suffix === "");
+  assertEquals(defaultVariant?.latest?.original, "a1c2d3e4-ls45");
+  assertEquals(defaultVariant?.older.length, 1);
+  assertEquals(defaultVariant?.older[0].original, "b3d6b63f-ls37");
+});
+
+Deno.test("findBestUpgrade - git hash build", () => {
+  const tags = ["b3d6b63f-ls37", "a1c2d3e4-ls45", "latest"];
+  const variants = groupByVariant(tags);
+  const result = findBestUpgrade("b3d6b63f-ls37", variants);
+  assertEquals(result, "a1c2d3e4-ls45");
+});
+
+Deno.test("groupByVariant - lsio v4 as floating", () => {
+  const tags = ["v4", "4.0.0"];
+  const variants = groupByVariant(tags, undefined, "linuxserver/emby");
+  const defaultVariant = variants.find((v) => v.prefix === "" && v.suffix === "");
+  assertEquals(defaultVariant?.latest?.original, "4.0.0");
+  assertEquals(defaultVariant?.floating.length, 1);
+  assertEquals(defaultVariant?.floating[0].original, "v4");
+});
+
+Deno.test("groupByVariant - lsio develop nightly floating", () => {
+  const tags = ["develop", "nightly", "3.0.0"];
+  const variants = groupByVariant(tags, undefined, "linuxserver/plex");
+  const defaultVariant = variants.find((v) => v.prefix === "" && v.suffix === "");
+  assertEquals(defaultVariant?.latest?.original, "3.0.0");
+  assertEquals(defaultVariant?.floating.length, 2);
+  const floatingNames = defaultVariant?.floating.map((t) => t.original) ?? [];
+  assertEquals(floatingNames.includes("develop"), true);
+  assertEquals(floatingNames.includes("nightly"), true);
+});
+
+Deno.test("groupByVariant - non-lsio v4 versioned", () => {
+  const tags = ["v4", "v3"];
+  const variants = groupByVariant(tags, undefined, "library/nginx");
+  const vVariant = variants.find((v) => v.prefix === "v" && v.suffix === "");
+  assertEquals(vVariant?.latest?.original, "v4");
+  assertEquals(vVariant?.older.length, 1);
+  assertEquals(vVariant?.older[0].original, "v3");
+  assertEquals(vVariant?.floating.length, 0);
+});
+

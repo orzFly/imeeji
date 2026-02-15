@@ -33,8 +33,11 @@ export function TagPicker({
     tags.push(t.original);
   }
 
+  const changelog = update.lsioMetadata?.changelog ?? [];
+  const changelogLines = changelog.length;
+
   const { rows } = useTerminalSize();
-  const viewportHeight = Math.max(1, rows - 8);
+  const viewportHeight = Math.max(1, rows - 8 - changelogLines * 2);
   const { cursor, visibleRange, moveUp, moveDown } = useViewport({
     itemCount: tags.length,
     viewportHeight,
@@ -76,6 +79,18 @@ export function TagPicker({
       <Box marginBottom={1}>
         <Text dimColor>Current: {update.currentTag} | Variant: {formatVariantLabel(variant)}</Text>
       </Box>
+
+      {changelog.length > 0 && (
+        <Box marginBottom={1} flexDirection="column">
+          <Text bold>Recent Changes:</Text>
+          {changelog.map((entry, idx) => (
+            <Box key={idx}>
+              <Text dimColor>{entry.date}: </Text>
+              <Text>{entry.description.slice(0, 60)}{entry.description.length > 60 ? "..." : ""}</Text>
+            </Box>
+          ))}
+        </Box>
+      )}
 
       {aboveCount > 0 && (
         <Box>
