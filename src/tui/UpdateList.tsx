@@ -1,6 +1,6 @@
 import { Box, Text, useInput } from "ink";
 import type { Key } from "ink";
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import type { ImageUpdate } from "../types.ts";
 import { useTerminalSize } from "./useTerminalSize.ts";
 import { TitleBar } from "./TitleBar.tsx";
@@ -40,15 +40,11 @@ export function UpdateList({
 }: UpdateListProps) {
   const { rows } = useTerminalSize();
   const viewportItems = Math.max(1, Math.floor((rows - 6) / 3));
-  const [scrollOffset, setScrollOffset] = useState(0);
 
-  useEffect(() => {
-    if (cursor < scrollOffset) {
-      setScrollOffset(cursor);
-    } else if (cursor >= scrollOffset + viewportItems) {
-      setScrollOffset(cursor - viewportItems + 1);
-    }
-  }, [cursor, viewportItems]);
+  const scrollOffset = useMemo(() => {
+    if (updates.length === 0) return 0;
+    return Math.max(0, Math.min(cursor, updates.length - viewportItems));
+  }, [cursor, updates.length, viewportItems]);
 
   useInput((input: string, key: Key) => {
     if (key.upArrow) {

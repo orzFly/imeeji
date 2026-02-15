@@ -27,8 +27,9 @@ export function ContextViewer({
   });
 
   const lines = fileContent.split("\n");
-  const startLine = Math.max(1, line - halfWindow);
-  const endLine = Math.min(lines.length, line + halfWindow);
+  const clampedLine = Math.max(1, Math.min(line, lines.length));
+  const startLine = Math.max(1, clampedLine - halfWindow);
+  const endLine = Math.min(lines.length, clampedLine + halfWindow);
 
   const contextLines: { num: number; content: string; isTarget: boolean }[] = [];
 
@@ -36,7 +37,7 @@ export function ContextViewer({
     contextLines.push({
       num: i,
       content: lines[i - 1] ?? "",
-      isTarget: i === line,
+      isTarget: i === clampedLine,
     });
   }
 

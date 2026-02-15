@@ -4,7 +4,7 @@ import { useStdout } from "ink";
 export function useTerminalSize(): { rows: number; columns: number } {
   const { stdout } = useStdout();
   const [size, setSize] = useState(() => {
-    if (stdout?.rows && stdout?.columns) {
+    if (stdout?.rows != null && stdout?.columns != null) {
       return { rows: stdout.rows, columns: stdout.columns };
     }
     try {
