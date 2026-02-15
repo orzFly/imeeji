@@ -2,7 +2,7 @@ import type { VariantGroup } from "../types.ts";
 
 export function formatVariantLabel(variant: VariantGroup): string {
   if (variant.variantKey === "*") return "(default)";
-  return variant.variantKey.replace(/\*/g, "").replace(/^-|-$/g, "");
+  return variant.variantKey;
 }
 
 export function formatImageName(
