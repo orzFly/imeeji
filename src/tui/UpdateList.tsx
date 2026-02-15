@@ -124,19 +124,23 @@ export function UpdateList({
 
         return (
           <Box key={idx} marginBottom={1} flexDirection="column">
-            <Box>
-              <Text
-                color={isHighlighted ? "cyan" : undefined}
-                bold={isHighlighted}
-              >
-                {prefix}
-                {checkbox}
-                {truncate(formatImageName(u.image), imageNameMax)}
-              </Text>
-              {u.lsioMetadata?.deprecated && (
-                <Text color="red" bold>DEPRECATED</Text>
-              )}
-              <Text dimColor>{location}</Text>
+            <Box flexGrow={1}>
+              <Box flexGrow={1}>
+                <Text
+                  color={isHighlighted ? "cyan" : undefined}
+                  bold={isHighlighted}
+                >
+                  {prefix}
+                  {checkbox}
+                  {truncate(formatImageName(u.image), imageNameMax)}
+                </Text>
+                {u.lsioMetadata?.deprecated && (
+                  <Text color="red" bold>DEPRECATED</Text>
+                )}
+              </Box>
+              <Box>
+                <Text dimColor>{location}</Text>
+              </Box>
             </Box>
             <Box marginLeft={4}>
               <Link

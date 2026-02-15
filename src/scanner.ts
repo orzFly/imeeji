@@ -63,9 +63,7 @@ export async function scanPaths(
 
     if (s.isFile()) {
       const file = await scanFile(resolved, seenInodes);
-      if (file && matchesPatterns(basename(resolved), resolved, options)) {
-        results.push(file);
-      }
+      if (file) results.push(file);
     } else if (s.isDirectory()) {
       const files = await walkDirectory(resolved, options);
       for (const filePath of files) {
