@@ -10,6 +10,7 @@ export interface ImageRef {
   startIndex: number;
   endIndex: number;
   originalFull?: string;
+  filePath: string;
 }
 
 export interface ParsedTag {

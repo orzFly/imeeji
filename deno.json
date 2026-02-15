@@ -13,7 +13,9 @@
   "test": {
     "permissions": {
       "net": true,
-      "read": true
+      "read": true,
+      "write": true,
+      "env": true
     }
   },
   "tasks": {
@@ -30,6 +32,8 @@
     "@std/cli": "jsr:@std/cli@^1.0.27",
     "@std/semver": "jsr:@std/semver@^1.0.8",
     "@types/react": "npm:@types/react@^19",
+    "ignore": "npm:ignore@^7.0.5",
+    "ignore-walk": "npm:ignore-walk@^8.0.0",
     "react": "npm:react@^19",
     "react/jsx-runtime": "npm:react@^19/jsx-runtime",
     "ink": "npm:ink@^6",

@@ -18,12 +18,11 @@ function findVariantIndex(update: ImageUpdate): number {
 
 interface AppProps {
   updates: ImageUpdate[];
-  filePath: string;
-  fileContent: string;
+  fileContents: Map<string, string>;
   onDone: (results: ImageRef[]) => void;
 }
 
-export function App({ updates, filePath, fileContent, onDone }: AppProps) {
+export function App({ updates, fileContents, onDone }: AppProps) {
   const [cursor, setCursor] = useState(0);
   const [selected, setSelected] = useState<Set<number>>(() =>
     new Set(updates.map((_, i) => i))
@@ -114,6 +113,8 @@ export function App({ updates, filePath, fileContent, onDone }: AppProps) {
 
   if (view === "context") {
     const update = updates[pickerImageIdx];
+    const filePath = update.image.filePath;
+    const fileContent = fileContents.get(filePath) ?? "";
     return (
       <ContextViewer
         filePath={filePath}
@@ -133,7 +134,6 @@ export function App({ updates, filePath, fileContent, onDone }: AppProps) {
       selected={selected}
       overrides={overrides}
       cursor={cursor}
-      filePath={filePath}
       onCursorChange={setCursor}
       onToggle={handleToggle}
       onEdit={(idx) => {

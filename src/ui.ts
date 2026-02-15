@@ -18,7 +18,7 @@ function printSummaryTable(updates: ImageUpdate[]): void {
     20,
   );
 
-  console.log("\n\ud83d\udccb Upgrade Summary:\n");
+  console.log("\n📋 Upgrade Summary:\n");
 
   for (const u of updates) {
     const name = truncate(formatImageName(u.image), nameWidth).padEnd(
@@ -26,7 +26,7 @@ function printSummaryTable(updates: ImageUpdate[]): void {
     );
     const current = truncate(u.currentTag, 20).padEnd(20);
     const newTag = truncate(u.newTag, 20);
-    console.log(`  ${name}  ${current} \u2192 ${newTag}`);
+    console.log(`  ${name}  ${current} → ${newTag}`);
   }
 
   console.log("");
@@ -35,8 +35,7 @@ function printSummaryTable(updates: ImageUpdate[]): void {
 export async function selectUpdates(
   updates: ImageUpdate[],
   autoYes: boolean,
-  filePath: string,
-  fileContent: string,
+  fileContents: Map<string, string>,
 ): Promise<ImageRef[]> {
   if (updates.length === 0) {
     console.log("No images found that can be upgraded.");
@@ -85,8 +84,7 @@ export async function selectUpdates(
     const app = render(
       createElement(App, {
         updates,
-        filePath,
-        fileContent,
+        fileContents,
         onDone: (results: ImageRef[]) => {
           app.unmount();
           cleanup();

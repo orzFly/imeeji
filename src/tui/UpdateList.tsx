@@ -8,13 +8,14 @@ import { ControlBar } from "./ControlBar.tsx";
 import { formatImageName, truncate } from "./format.ts";
 import { getTagUrl } from "./tagUrl.ts";
 import { Link } from "./Link.tsx";
+import { basename, relative } from "node:path";
+import process from "node:process";
 
 interface UpdateListProps {
   updates: ImageUpdate[];
   selected: Set<number>;
   overrides: Map<number, string>;
   cursor: number;
-  filePath: string;
   onCursorChange: (idx: number) => void;
   onToggle: (idx: number) => void;
   onEdit: (idx: number) => void;
@@ -25,12 +26,20 @@ interface UpdateListProps {
   onQuit: () => void;
 }
 
+function formatFilePath(filePath: string): string {
+  const cwd = process.cwd();
+  const rel = relative(cwd, filePath);
+  if (rel && !rel.startsWith("..")) {
+    return rel;
+  }
+  return basename(filePath);
+}
+
 export function UpdateList({
   updates,
   selected,
   overrides,
   cursor,
-  filePath,
   onCursorChange,
   onToggle,
   onEdit,
@@ -104,6 +113,7 @@ export function UpdateList({
         const isSelected = selected.has(idx);
         const isHighlighted = idx === cursor;
         const displayTag = overrides.get(idx) ?? u.newTag;
+        const filePath = formatFilePath(u.image.filePath);
         const location = `${filePath}:${u.image.line}`;
         const prefix = isHighlighted ? "> " : "  ";
         const checkbox = `[${isSelected ? "x" : " "}] ${idx + 1}. `;

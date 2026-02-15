@@ -3,7 +3,7 @@ import type { ImageRef } from "./types.ts";
 const IMAGE_PATTERN =
   /(?<registry>[a-z0-9][a-z0-9.-]*\.[a-z]{2,})\/(?<repo>[a-z0-9_.-]+(?:\/[a-z0-9_.-]+)*):(?<tag>[a-zA-Z0-9._-]+)/gi;
 
-export function findImages(content: string): ImageRef[] {
+export function findImages(content: string, filePath: string): ImageRef[] {
   const images: ImageRef[] = [];
 
   for (const match of content.matchAll(IMAGE_PATTERN)) {
@@ -33,6 +33,7 @@ export function findImages(content: string): ImageRef[] {
       column,
       startIndex,
       endIndex: startIndex + fullMatch.length,
+      filePath,
     });
   }
 

@@ -479,7 +479,7 @@ Deno.test("findBestUpgrade - preserves prefix from re-parsed tag", () => {
 
 Deno.test("findImages extracts docker images", () => {
   const content = `image = "docker.io/library/postgres:18.1-alpine";`;
-  const images = findImages(content);
+  const images = findImages(content, "test.nix");
   assertEquals(images.length, 1);
   assertEquals(images[0].registry, "docker.io");
   assertEquals(images[0].repository, "library/postgres");

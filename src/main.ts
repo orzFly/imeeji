@@ -18,6 +18,8 @@ import {
   isLinuxServerRepo,
 } from "./integrations/lsio.ts";
 import { parseImageRef, runAdhocMode } from "./adhoc.ts";
+import { hashContent, scanPaths } from "./scanner.ts";
+import type { ScannedFile } from "./scanner.ts";
 
 const VERSION = "0.1.0";
 
@@ -26,19 +28,27 @@ function printHelp(): void {
 imeeji - Interactive Docker Image Upgrade Tool
 
 USAGE:
-  imeeji [OPTIONS] <FILE>
+  imeeji [OPTIONS] <PATH...>
   imeeji [OPTIONS] <IMAGE>       # Ad-hoc mode: select version for image
 
 OPTIONS:
-  -n, --dry-run    Print diff without modifying file (file mode)
-  -y, --yes        Auto-accept latest versions (non-interactive)
-  -h, --help       Print this help message
-  -V, --version    Print version
+  -n, --dry-run          Print diff without modifying files
+  -y, --yes              Auto-accept latest versions (non-interactive)
+  --include <PATTERN>    Include glob pattern (repeatable, adds to defaults)
+  --exclude <PATTERN>    Exclude glob pattern (repeatable)
+  --exclude-default      Disable default include patterns
+  --include-ignored      Include files ignored by .gitignore
+  -h, --help             Print help message
+  -V, --version          Print version
 
-FILE MODE EXAMPLES:
-  imeeji config.nix              Interactive upgrade
-  imeeji --dry-run config.nix    Preview changes only
-  imeeji -y config.nix           Auto-upgrade all to latest
+PATH MODE EXAMPLES:
+  imeeji config.nix                    Interactive upgrade single file
+  imeeji src/                          Recursive scan directory
+  imeeji file1.nix file2.yaml          Multiple files
+  imeeji --dry-run .                   Preview changes (recursive)
+  imeeji -y .                          Auto-upgrade all to latest
+  imeeji --include "*.json" .          Include additional patterns
+  imeeji --exclude "*.test.yaml" .     Exclude specific patterns
 
 AD-HOC MODE EXAMPLES:
   imeeji nginx                   Select version/variant for nginx
@@ -50,14 +60,23 @@ AD-HOC MODE EXAMPLES:
 
 async function main(): Promise<void> {
   const parsed = parseArgs(process.argv.slice(2), {
-    boolean: ["dry-run", "yes", "help", "version"],
+    boolean: [
+      "dry-run",
+      "yes",
+      "help",
+      "version",
+      "exclude-default",
+      "include-ignored",
+    ],
+    string: ["include", "exclude"],
     alias: {
       n: "dry-run",
       y: "yes",
       h: "help",
       V: "version",
     },
-    stopEarly: true,
+    collect: ["include", "exclude"],
+    stopEarly: false,
   });
 
   if (parsed.version) {
@@ -70,44 +89,68 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  const arg = parsed._[0]?.toString() ?? null;
+  const inputPaths = parsed._.map(String);
 
-  if (!arg) {
-    console.error("Error: No file or image specified");
+  if (inputPaths.length === 0) {
+    console.error("Error: No path or image specified");
     printHelp();
     process.exit(1);
   }
 
-  const filePath = arg;
   const dryRun = parsed["dry-run"] ?? false;
   const autoYes = parsed.yes ?? false;
+  const includePatterns = parsed.include as string[] | undefined;
+  const excludePatterns = parsed.exclude as string[] | undefined;
+  const excludeDefault = parsed["exclude-default"] ?? false;
+  const includeIgnored = parsed["include-ignored"] ?? false;
 
-  let content: string;
-  try {
-    content = await readFile(filePath, "utf-8");
-  } catch {
-    const parsedImage = parseImageRef(arg);
-    const result = await runAdhocMode(parsedImage, autoYes);
-    if (result) {
-      console.log(result);
-    } else {
+  const scannedFiles = await scanPaths(inputPaths, {
+    include: includePatterns,
+    exclude: excludePatterns,
+    excludeDefault,
+    includeIgnored,
+  });
+
+  if (scannedFiles.length === 0) {
+    const singleArg = inputPaths[0];
+    const parsedImage = parseImageRef(singleArg);
+    if (parsedImage) {
+      const result = await runAdhocMode(parsedImage, autoYes);
+      if (result) {
+        console.log(result);
+        return;
+      }
       process.exit(1);
     }
+
+    console.log("No matching files found.");
     return;
   }
 
-  const images = findImages(content);
+  const allImages: (ScannedFile & { images: ReturnType<typeof findImages> })[] =
+    [];
+  let totalImages = 0;
 
-  if (images.length === 0) {
-    console.log("No docker images found in file.");
+  for (const file of scannedFiles) {
+    const images = findImages(file.content, file.path);
+    if (images.length > 0) {
+      allImages.push({ ...file, images });
+      totalImages += images.length;
+    }
+  }
+
+  if (totalImages === 0) {
+    console.log("No docker images found in scanned files.");
     return;
   }
 
-  console.log(`Found ${images.length} image(s) in ${filePath}`);
+  console.log(
+    `Found ${totalImages} image(s) in ${allImages.length} file(s)`,
+  );
 
   const uniqueEntries = Array.from(
     new Map(
-      images.map((img) => [
+      allImages.flatMap((f) => f.images).map((img) => [
         getRepositoryKey(img.registry, img.repository),
         img,
       ]),
@@ -116,7 +159,9 @@ async function main(): Promise<void> {
 
   uniqueEntries.forEach(([key]) => console.log(`Fetching tags for ${key}...`));
 
-  const hasLsioRepo = images.some((img) => isLinuxServerRepo(img.repository));
+  const hasLsioRepo = allImages.some((f) =>
+    f.images.some((img) => isLinuxServerRepo(img.repository))
+  );
   const lsioMetadataPromise = hasLsioRepo ? fetchLsioMetadata() : null;
 
   const [results, lsioMetadata] = await Promise.all([
@@ -157,34 +202,36 @@ async function main(): Promise<void> {
 
   const updates: ImageUpdate[] = [];
 
-  for (const image of images) {
-    const key = getRepositoryKey(image.registry, image.repository);
-    const result = repoCache.get(key);
-    const tags = result?.tags ?? [];
+  for (const file of allImages) {
+    for (const image of file.images) {
+      const key = getRepositoryKey(image.registry, image.repository);
+      const result = repoCache.get(key);
+      const tags = result?.tags ?? [];
 
-    if (tags.length === 0) {
-      console.log(`  Skipping ${key}: no tags available`);
-      continue;
-    }
+      if (tags.length === 0) {
+        console.log(`  Skipping ${key}: no tags available`);
+        continue;
+      }
 
-    const repoKey = `linuxserver/${
-      image.repository.replace("linuxserver/", "")
-    }`;
-    const lsioMeta = lsioMetadata?.get(repoKey);
-    const floatingTags = lsioMeta ? getLsioFloatingTags(lsioMeta) : undefined;
+      const repoKey = `linuxserver/${
+        image.repository.replace("linuxserver/", "")
+      }`;
+      const lsioMeta = lsioMetadata?.get(repoKey);
+      const floatingTags = lsioMeta ? getLsioFloatingTags(lsioMeta) : undefined;
 
-    const variants = groupByVariant(tags, result?.digestMap, floatingTags);
-    const newTag = findBestUpgrade(image.tag, variants);
+      const variants = groupByVariant(tags, result?.digestMap, floatingTags);
+      const newTag = findBestUpgrade(image.tag, variants);
 
-    if (newTag) {
-      updates.push({
-        image,
-        currentTag: image.tag,
-        newTag,
-        variants,
-        currentVariant: findMatchingVariant(image.tag, variants),
-        lsioMetadata: lsioMeta,
-      });
+      if (newTag) {
+        updates.push({
+          image,
+          currentTag: image.tag,
+          newTag,
+          variants,
+          currentVariant: findMatchingVariant(image.tag, variants),
+          lsioMetadata: lsioMeta,
+        });
+      }
     }
   }
 
@@ -193,11 +240,15 @@ async function main(): Promise<void> {
     return;
   }
 
+  const fileContents = new Map<string, string>();
+  for (const file of scannedFiles) {
+    fileContents.set(file.path, file.content);
+  }
+
   const selectedUpdates = await selectUpdates(
     updates,
     autoYes,
-    filePath,
-    content,
+    fileContents,
   );
 
   if (selectedUpdates.length === 0) {
@@ -205,14 +256,45 @@ async function main(): Promise<void> {
     return;
   }
 
+  const updatesByFile = new Map<string, typeof selectedUpdates>();
+  for (const update of selectedUpdates) {
+    const existing = updatesByFile.get(update.filePath) ?? [];
+    existing.push(update);
+    updatesByFile.set(update.filePath, existing);
+  }
+
+  const fileHashes = new Map<string, string>();
+  for (const file of scannedFiles) {
+    fileHashes.set(file.path, file.hash);
+  }
+
   if (dryRun) {
-    const diff = generateDiff(filePath, content, selectedUpdates);
-    console.log("\n" + diff);
+    for (const [filePath, fileUpdates] of updatesByFile) {
+      const content = fileContents.get(filePath)!;
+      const diff = generateDiff(filePath, content, fileUpdates);
+      console.log("\n" + diff);
+    }
     console.log(`\n(Dry run - no changes made)`);
   } else {
-    const newContent = applyPatches(content, selectedUpdates);
-    await writeFile(filePath, newContent, "utf-8");
-    console.log(`\nUpdated ${selectedUpdates.length} image(s) in ${filePath}`);
+    for (const [filePath, _fileUpdates] of updatesByFile) {
+      const currentContent = await readFile(filePath, "utf-8");
+      const currentHash = hashContent(currentContent);
+      const originalHash = fileHashes.get(filePath);
+
+      if (currentHash !== originalHash) {
+        console.error(
+          `Error: ${filePath} was modified during operation. Aborting.`,
+        );
+        process.exit(1);
+      }
+    }
+
+    for (const [filePath, fileUpdates] of updatesByFile) {
+      const content = fileContents.get(filePath)!;
+      const newContent = applyPatches(content, fileUpdates);
+      await writeFile(filePath, newContent, "utf-8");
+      console.log(`\nUpdated ${fileUpdates.length} image(s) in ${filePath}`);
+    }
   }
 }
 

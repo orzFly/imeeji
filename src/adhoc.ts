@@ -150,6 +150,7 @@ export function createImageUpdate(
     column: 0,
     startIndex: 0,
     endIndex: 0,
+    filePath: "",
   };
 
   let newTag: string | null = null;
