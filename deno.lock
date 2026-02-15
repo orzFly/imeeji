@@ -6,6 +6,7 @@
     "jsr:@std/fmt@^1.0.9": "1.0.9",
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "jsr:@std/semver@^1.0.8": "1.0.8",
+    "npm:@types/node@*": "24.2.0",
     "npm:@types/react@19": "19.2.14",
     "npm:ink@6": "6.7.0_@types+react@19.2.14_react@19.2.4",
     "npm:react@19": "19.2.4",
@@ -41,6 +42,12 @@
       "dependencies": [
         "ansi-styles",
         "is-fullwidth-code-point"
+      ]
+    },
+    "@types/node@24.2.0": {
+      "integrity": "sha512-3xyG3pMCq3oYCNg7/ZP+E1ooTaGB4cG8JWRsqqOYQdbWNY4zbaV0Ennrd7stjiJEFZCaybcIgpTjJWHRfBSIDw==",
+      "dependencies": [
+        "undici-types"
       ]
     },
     "@types/react@19.2.14": {
@@ -238,6 +245,9 @@
       "dependencies": [
         "tagged-tag"
       ]
+    },
+    "undici-types@7.10.0": {
+      "integrity": "sha512-t5Fy/nfn+14LuOc2KNYg75vZqClpAiqscVvMygNnlsHBFpSXdJaYtXMcdNLpl/Qvc3P2cB3s6lOV51nqsFq4ag=="
     },
     "widest-line@6.0.0": {
       "integrity": "sha512-U89AsyEeAsyoF0zVJBkG9zBgekjgjK7yk9sje3F4IQpXBJ10TF6ByLlIfjMhcmHMJgHZI4KHt4rdNfktzxIAMA==",

@@ -18,7 +18,8 @@
   },
   "tasks": {
     "dev": "deno run --watch src/main.ts",
-    "test": "deno test -P src/"
+    "test": "deno test -P src/",
+    "build": "deno bundle --external react-devtools-core src/main.ts > dist/imeeji.js && sed -i 's/import devtools from \"react-devtools-core\";/const devtools = { initialize: () => {}, connectToDevTools: () => {} };/' dist/imeeji.js"
   },
   "compilerOptions": {
     "jsx": "react-jsx",

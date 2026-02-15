@@ -3,3 +3,4 @@
 /.env.*
 /.research/
 node_modules/
+/dist/
