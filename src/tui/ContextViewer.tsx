@@ -1,6 +1,8 @@
 import { Box, Text, useInput } from "ink";
 import type { Key } from "ink";
-import { useTerminalHeight } from "./useTerminalHeight.ts";
+import { useTerminalSize } from "./useTerminalSize.ts";
+import { TitleBar } from "./TitleBar.tsx";
+import { ControlBar } from "./ControlBar.tsx";
 
 interface ContextViewerProps {
   filePath: string;
@@ -15,8 +17,8 @@ export function ContextViewer({
   line,
   onClose,
 }: ContextViewerProps) {
-  const rows = useTerminalHeight();
-  const halfWindow = Math.max(1, Math.floor((rows - 4) / 2));
+  const { rows } = useTerminalSize();
+  const halfWindow = Math.max(1, Math.floor((rows - 6) / 2));
 
   useInput((_input: string, key: Key) => {
     if (key.escape) {
@@ -41,10 +43,14 @@ export function ContextViewer({
   const maxLineNum = Math.max(...contextLines.map((l) => l.num));
   const lineNumWidth = String(maxLineNum).length;
 
+  const shortcuts = [
+    { key: "ESC", label: "Close" },
+  ];
+
   return (
     <Box flexDirection="column" height={rows} overflow="hidden">
       <Box marginBottom={1}>
-        <Text bold>File: {filePath}</Text>
+        <TitleBar title="File Context" subtitle={filePath} />
       </Box>
 
       <Box flexDirection="column">
@@ -62,8 +68,8 @@ export function ContextViewer({
         ))}
       </Box>
 
-      <Box marginTop={1}>
-        <Text dimColor>[Esc] Close</Text>
+      <Box flexGrow={1} justifyContent="flex-end" flexDirection="column">
+        <ControlBar shortcuts={shortcuts} />
       </Box>
     </Box>
   );

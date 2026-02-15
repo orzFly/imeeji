@@ -2,7 +2,9 @@ import { Box, Text, useInput } from "ink";
 import type { Key } from "ink";
 import type { VariantGroup } from "../types.ts";
 import { useViewport } from "./useViewport.ts";
-import { useTerminalHeight } from "./useTerminalHeight.ts";
+import { useTerminalSize } from "./useTerminalSize.ts";
+import { TitleBar } from "./TitleBar.tsx";
+import { ControlBar } from "./ControlBar.tsx";
 import { formatVariantLabel } from "./format.ts";
 
 interface VariantPickerProps {
@@ -18,8 +20,8 @@ export function VariantPicker({
   onSelect,
   onCancel,
 }: VariantPickerProps) {
-  const rows = useTerminalHeight();
-  const viewportItems = Math.max(1, Math.floor((rows - 4) / 3));
+  const { rows } = useTerminalSize();
+  const viewportItems = Math.max(1, Math.floor((rows - 6) / 3));
   const { cursor, visibleRange, moveUp, moveDown } = useViewport({
     itemCount: variants.length,
     viewportHeight: viewportItems,
@@ -41,10 +43,15 @@ export function VariantPicker({
   const aboveCount = visibleRange.start;
   const belowCount = variants.length - visibleRange.end;
 
+  const shortcuts = [
+    { key: "ESC", label: "Cancel" },
+    { key: "RET", label: "Select Variant" },
+  ];
+
   return (
     <Box flexDirection="column" height={rows} overflow="hidden">
       <Box marginBottom={1}>
-        <Text bold>Select Variant:</Text>
+        <TitleBar title="Select Variant" />
       </Box>
 
       {aboveCount > 0 && (
@@ -99,8 +106,8 @@ export function VariantPicker({
         </Box>
       )}
 
-      <Box marginTop={1}>
-        <Text dimColor>[Esc] Cancel [Enter] Select Variant</Text>
+      <Box flexGrow={1} justifyContent="flex-end" flexDirection="column">
+        <ControlBar shortcuts={shortcuts} />
       </Box>
     </Box>
   );

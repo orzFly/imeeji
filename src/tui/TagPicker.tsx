@@ -2,7 +2,9 @@ import { Box, Text, useInput } from "ink";
 import type { Key } from "ink";
 import type { ImageUpdate } from "../types.ts";
 import { useViewport } from "./useViewport.ts";
-import { useTerminalHeight } from "./useTerminalHeight.ts";
+import { useTerminalSize } from "./useTerminalSize.ts";
+import { TitleBar } from "./TitleBar.tsx";
+import { ControlBar } from "./ControlBar.tsx";
 import { formatVariantLabel } from "./format.ts";
 
 interface TagPickerProps {
@@ -31,8 +33,8 @@ export function TagPicker({
     tags.push(t.original);
   }
 
-  const rows = useTerminalHeight();
-  const viewportHeight = Math.max(1, rows - 6);
+  const { rows } = useTerminalSize();
+  const viewportHeight = Math.max(1, rows - 8);
   const { cursor, visibleRange, moveUp, moveDown } = useViewport({
     itemCount: tags.length,
     viewportHeight,
@@ -58,10 +60,18 @@ export function TagPicker({
   const aboveCount = visibleRange.start;
   const belowCount = tags.length - visibleRange.end;
 
+  const imageName = `${update.image.registry}/${update.image.repository}`;
+
+  const shortcuts = [
+    { key: "ESC", label: "Back" },
+    { key: "RET", label: "Select" },
+    ...(update.variants.length > 1 ? [{ key: "TAB", label: "Change Variant" }] : []),
+  ];
+
   return (
     <Box flexDirection="column" height={rows} overflow="hidden">
       <Box marginBottom={1}>
-        <Text bold>Select version for {update.image.registry}/{update.image.repository}</Text>
+        <TitleBar title="Select Version" subtitle={imageName} />
       </Box>
       <Box marginBottom={1}>
         <Text dimColor>Current: {update.currentTag} | Variant: {formatVariantLabel(variant)}</Text>
@@ -101,11 +111,8 @@ export function TagPicker({
         </Box>
       )}
 
-      <Box marginTop={1}>
-        <Text dimColor>
-          [Esc] Back [Enter] Select
-          {update.variants.length > 1 ? " [Tab] Change Variant" : ""}
-        </Text>
+      <Box flexGrow={1} justifyContent="flex-end" flexDirection="column">
+        <ControlBar shortcuts={shortcuts} />
       </Box>
     </Box>
   );

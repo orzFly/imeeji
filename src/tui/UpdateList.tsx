@@ -2,7 +2,9 @@ import { Box, Text, useInput } from "ink";
 import type { Key } from "ink";
 import { useState, useEffect } from "react";
 import type { ImageUpdate } from "../types.ts";
-import { useTerminalHeight } from "./useTerminalHeight.ts";
+import { useTerminalSize } from "./useTerminalSize.ts";
+import { TitleBar } from "./TitleBar.tsx";
+import { ControlBar } from "./ControlBar.tsx";
 import { formatImageName, truncate } from "./format.ts";
 
 interface UpdateListProps {
@@ -36,7 +38,7 @@ export function UpdateList({
   onConfirm,
   onQuit,
 }: UpdateListProps) {
-  const rows = useTerminalHeight();
+  const { rows } = useTerminalSize();
   const viewportItems = Math.max(1, Math.floor((rows - 6) / 3));
   const [scrollOffset, setScrollOffset] = useState(0);
 
@@ -79,10 +81,20 @@ export function UpdateList({
   const aboveCount = scrollOffset;
   const belowCount = Math.max(0, updates.length - scrollOffset - viewportItems);
 
+  const shortcuts = [
+    { key: "SPC", label: "Toggle" },
+    { key: "RET", label: "Edit Version" },
+    { key: "A", label: "Select All" },
+    { key: "N", label: "Select None" },
+    { key: "V", label: "View Context" },
+    { key: "C", label: "Confirm" },
+    { key: "Q", label: "Quit" },
+  ];
+
   return (
     <Box flexDirection="column" height={rows} overflow="hidden">
       <Box marginBottom={1}>
-        <Text bold>imeeji — Interactive Upgrade</Text>
+        <TitleBar title="Interactive Upgrade" />
       </Box>
 
       {aboveCount > 0 && (
@@ -128,14 +140,8 @@ export function UpdateList({
         </Box>
       )}
 
-      <Box marginTop={1} flexDirection="column">
-        <Text dimColor>Controls:</Text>
-        <Text dimColor>
-          [Space] Toggle [Enter] Edit Version [A] Select All [N] Select None
-        </Text>
-        <Text dimColor>
-          [V] View Context [C] Confirm & Apply [Q] Quit
-        </Text>
+      <Box flexGrow={1} justifyContent="flex-end" flexDirection="column">
+        <ControlBar shortcuts={shortcuts} />
       </Box>
     </Box>
   );
