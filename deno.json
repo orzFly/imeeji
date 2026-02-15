@@ -6,7 +6,8 @@
     "default": {
       "net": true,
       "read": true,
-      "write": true
+      "write": true,
+      "env": true
     }
   },
   "test": {
