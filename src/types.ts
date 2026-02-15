@@ -20,6 +20,7 @@ export interface ParsedTag {
 }
 
 export interface VariantGroup {
+  prefix: string;
   suffix: string;
   latest: ParsedTag | null;
   older: ParsedTag[];

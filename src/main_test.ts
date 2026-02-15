@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { findBestUpgrade, groupByVariant, parseTag } from "./analyzer.ts";
+import { findBestUpgrade, findMatchingVariant, groupByVariant, parseTag } from "./analyzer.ts";
 import { findImages } from "./parser.ts";
 
 Deno.test("parseTag - standard version with suffix", () => {
@@ -447,16 +447,14 @@ Deno.test("groupByVariant - with digest map re-parsing", () => {
   ]);
   const variants = groupByVariant(tags, digestMap);
 
-  const defaultVariant = variants.find((v) => v.suffix === "");
+  const defaultVariant = variants.find((v) => v.prefix === "" && v.suffix === "");
   assertEquals(defaultVariant?.latest?.original, "8.0.44-35");
-  assertEquals(defaultVariant?.older.length, 4);
+  assertEquals(defaultVariant?.older.length, 2);
 
-  const allVersioned = defaultVariant?.latest
-    ? [defaultVariant.latest, ...defaultVariant.older]
-    : defaultVariant?.older ?? [];
-  const psTag = allVersioned.find((t) => t.original === "ps-8.0.44-35");
-  assertEquals(psTag?.prefix, "ps-");
-  assertEquals(psTag?.version, "8.0.44-35");
+  const psVariant = variants.find((v) => v.prefix === "ps-" && v.suffix === "");
+  assertEquals(psVariant?.latest?.original, "ps-8.0.44-35");
+  assertEquals(psVariant?.older.length, 1);
+  assertEquals(psVariant?.older[0].original, "ps-8.0.43-34");
 });
 
 Deno.test("findBestUpgrade - preserves prefix from re-parsed tag", () => {
@@ -583,3 +581,170 @@ Deno.test("groupByVariant - stable sorts above milestone", () => {
   assertEquals(defaultVariant?.older[0].original, "8.0-M02");
   assertEquals(defaultVariant?.older[1].original, "8.0-M01");
 });
+
+Deno.test("parseTag - build counter ig446", () => {
+  const result = parseTag("v2.5.6-ig446");
+  assertEquals(result.prefix, "v");
+  assertEquals(result.version, "2.5.6-ig446");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - build counter ls189", () => {
+  const result = parseTag("v1.0.0-ls189");
+  assertEquals(result.prefix, "v");
+  assertEquals(result.version, "1.0.0-ls189");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - build counter with suffix", () => {
+  const result = parseTag("v2.5.6-ig446-noml");
+  assertEquals(result.prefix, "v");
+  assertEquals(result.version, "2.5.6-ig446");
+  assertEquals(result.suffix, "noml");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - arch prefix amd64", () => {
+  const result = parseTag("amd64-2.5.6");
+  assertEquals(result.prefix, "amd64-");
+  assertEquals(result.version, "2.5.6");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - arch prefix with suffix", () => {
+  const result = parseTag("arm64v8-2.5.6-noml");
+  assertEquals(result.prefix, "arm64v8-");
+  assertEquals(result.version, "2.5.6");
+  assertEquals(result.suffix, "noml");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - arch prefix with v and build counter", () => {
+  const result = parseTag("amd64-v2.5.6-ig446");
+  assertEquals(result.prefix, "amd64-v");
+  assertEquals(result.version, "2.5.6-ig446");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - version-v prefix", () => {
+  const result = parseTag("version-v2.5.6");
+  assertEquals(result.prefix, "version-v");
+  assertEquals(result.version, "2.5.6");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - arch prefix with version-v", () => {
+  const result = parseTag("arm64v8-version-v2.5.6");
+  assertEquals(result.prefix, "arm64v8-version-v");
+  assertEquals(result.version, "2.5.6");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - floating arch-prefixed", () => {
+  const result = parseTag("amd64-noml");
+  assertEquals(result.prefix, "amd64-");
+  assertEquals(result.suffix, "noml");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating arm64v8-latest", () => {
+  const result = parseTag("arm64v8-latest");
+  assertEquals(result.prefix, "arm64v8-");
+  assertEquals(result.suffix, "latest");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - enterprise still floating", () => {
+  const result = parseTag("enterprise-7.6.9");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "enterprise-7.6.9");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - ps still floating", () => {
+  const result = parseTag("ps-8.0.44-35");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "ps-8.0.44-35");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("groupByVariant - imagegenius with suffix inference", () => {
+  const tags = [
+    "2.5.6-noml",
+    "2.4.1-noml",
+    "noml-v2.5.6-ig356",
+    "noml-v2.4.1-ig300",
+    "noml",
+  ];
+  const variants = groupByVariant(tags);
+
+  const suffixNoml = variants.find((v) => v.prefix === "" && v.suffix === "noml");
+  assertEquals(suffixNoml?.latest?.original, "2.5.6-noml");
+  assertEquals(suffixNoml?.older.length, 1);
+  assertEquals(suffixNoml?.older[0].original, "2.4.1-noml");
+
+  const prefixNoml = variants.find((v) => v.prefix === "noml-v" && v.suffix === "noml");
+  assertEquals(prefixNoml?.latest?.original, "noml-v2.5.6-ig356");
+  assertEquals(prefixNoml?.older.length, 1);
+  assertEquals(prefixNoml?.older[0].original, "noml-v2.4.1-ig300");
+});
+
+Deno.test("findBestUpgrade - imagegenius pinned tag", () => {
+  const tags = [
+    "noml-v2.5.6-ig356",
+    "noml-v2.4.1-ig300",
+    "2.5.6-noml",
+    "2.4.1-noml",
+  ];
+  const variants = groupByVariant(tags);
+
+  const result1 = findBestUpgrade("noml-v2.4.1-ig300", variants);
+  assertEquals(result1, "noml-v2.5.6-ig356");
+
+  const result2 = findBestUpgrade("2.4.1-noml", variants);
+  assertEquals(result2, "2.5.6-noml");
+});
+
+Deno.test("groupByVariant - arch tags separate groups", () => {
+  const tags = ["amd64-2.5.6", "2.5.6"];
+  const variants = groupByVariant(tags);
+
+  const amd64Variant = variants.find((v) => v.prefix === "amd64-" && v.suffix === "");
+  assertEquals(amd64Variant?.latest?.original, "amd64-2.5.6");
+
+  const defaultVariant = variants.find((v) => v.prefix === "" && v.suffix === "");
+  assertEquals(defaultVariant?.latest?.original, "2.5.6");
+});
+
+Deno.test("groupByVariant - v-prefix separate group", () => {
+  const tags = ["v1.2.3-alpine", "1.3.0-alpine"];
+  const variants = groupByVariant(tags);
+
+  const vAlpine = variants.find((v) => v.prefix === "v" && v.suffix === "alpine");
+  assertEquals(vAlpine?.latest?.original, "v1.2.3-alpine");
+
+  const alpine = variants.find((v) => v.prefix === "" && v.suffix === "alpine");
+  assertEquals(alpine?.latest?.original, "1.3.0-alpine");
+});
+
+Deno.test("findMatchingVariant - prefix+suffix match", () => {
+  const tags = ["v1.2.3-alpine", "1.3.0-alpine"];
+  const variants = groupByVariant(tags);
+
+  const vMatch = findMatchingVariant("v1.2.3-alpine", variants);
+  assertEquals(vMatch?.prefix, "v");
+  assertEquals(vMatch?.suffix, "alpine");
+
+  const noPrefixMatch = findMatchingVariant("1.3.0-alpine", variants);
+  assertEquals(noPrefixMatch?.prefix, "");
+  assertEquals(noPrefixMatch?.suffix, "alpine");
+});
+

@@ -3,28 +3,40 @@ import type { ParsedTag, VariantGroup } from "./types.ts";
 
 const JAVA_STYLE_REGEX = /^(\d+u\d+(?:-b\d+)?)(?:-(.+))?$/;
 const STANDARD_VERSION_REGEX =
-  /^(\d+(?:[._]\d+)*(?:-(?:(?:rc|beta|alpha|dev|preview|canary|nightly)\d*|m\d+))?(?:-\d+)*(?:-[a-z][0-9a-f]+)?)(?:-(.+))?$/i;
+  /^(\d+(?:[._]\d+)*(?:-(?:(?:rc|beta|alpha|dev|preview|canary|nightly)\d*|m\d+))?(?:-\d+)*(?:-[a-z][0-9a-f]+)?(?:-[a-z]{1,2}\d+)?)(?:-(.+))?$/i;
+const ARCH_PREFIX_REGEX = /^(amd64|arm64v8|arm32v[567]|i386|s390x|ppc64le|riscv64|mips64le)-/i;
 
 export function parseTag(tag: string): ParsedTag {
   let remaining = tag;
   let prefix = "";
 
-  if (remaining.toLowerCase() === "v") {
-    prefix = "v";
+  const archMatch = remaining.match(ARCH_PREFIX_REGEX);
+  if (archMatch) {
+    prefix = archMatch[1].toLowerCase() + "-";
+    remaining = remaining.slice(archMatch[0].length);
+  }
+
+  if (
+    remaining.toLowerCase().startsWith("version-v") && /^\d/.test(remaining.slice(9))
+  ) {
+    prefix += "version-v";
+    remaining = remaining.slice(9);
+  } else if (remaining.toLowerCase() === "v") {
+    prefix += "v";
     remaining = "";
   } else if (
     remaining.toLowerCase().startsWith("v") && /^\d/.test(remaining.slice(1))
   ) {
-    prefix = "v";
+    prefix += "v";
     remaining = remaining.slice(1);
   }
 
   if (!remaining || !/^\d/.test(remaining)) {
     return {
       original: tag,
-      prefix: "",
+      prefix,
       version: "",
-      suffix: tag,
+      suffix: remaining,
       semver: false,
       isFloating: true,
     };
@@ -60,9 +72,9 @@ export function parseTag(tag: string): ParsedTag {
 
   return {
     original: tag,
-    prefix: "",
+    prefix,
     version: "",
-    suffix: tag,
+    suffix: remaining,
     semver: false,
     isFloating: true,
   };
@@ -127,6 +139,15 @@ function compareVersions(a: ParsedTag, b: ParsedTag): number {
     if (numA !== numB) return numA - numB;
   }
 
+  const buildRegex = /-([a-z]{1,2})(\d+)$/i;
+  const buildA = a.version.match(buildRegex);
+  const buildB = b.version.match(buildRegex);
+  if (buildA && buildB && buildA[1].toLowerCase() === buildB[1].toLowerCase()) {
+    const numA = parseInt(buildA[2], 10);
+    const numB = parseInt(buildB[2], 10);
+    if (numA !== numB) return numA - numB;
+  }
+
   return 0;
 }
 
@@ -185,6 +206,41 @@ function reparseWithDigests(
   return result;
 }
 
+function reparseWithSuffixInference(parsed: ParsedTag[]): ParsedTag[] {
+  const knownSuffixes = new Set<string>();
+  for (const p of parsed) {
+    if (!p.isFloating && p.suffix) {
+      knownSuffixes.add(p.suffix);
+    }
+  }
+
+  if (knownSuffixes.size === 0) return parsed;
+
+  const result = [...parsed];
+  for (let i = 0; i < result.length; i++) {
+    const p = result[i];
+    if (!p.isFloating) continue;
+
+    for (const suffix of knownSuffixes) {
+      if (!p.original.startsWith(suffix + "-")) continue;
+      const remainder = p.original.slice(suffix.length + 1);
+      const reparsed = parseTag(remainder);
+      if (reparsed.isFloating) continue;
+
+      result[i] = {
+        original: p.original,
+        prefix: suffix + "-" + reparsed.prefix,
+        version: reparsed.version,
+        suffix: suffix,
+        semver: reparsed.semver,
+        isFloating: false,
+      };
+      break;
+    }
+  }
+  return result;
+}
+
 export function groupByVariant(
   tags: string[],
   digestMap?: Map<string, string>,
@@ -194,11 +250,12 @@ export function groupByVariant(
   if (digestMap) {
     parsed = reparseWithDigests(parsed, digestMap);
   }
+  parsed = reparseWithSuffixInference(parsed);
 
   const versionedGroups = new Map<string, ParsedTag[]>();
   for (const p of parsed) {
     if (!p.isFloating) {
-      const key = p.suffix;
+      const key = p.prefix + "\0" + p.suffix;
       if (!versionedGroups.has(key)) {
         versionedGroups.set(key, []);
       }
@@ -210,7 +267,7 @@ export function groupByVariant(
 
   const result: VariantGroup[] = [];
 
-  for (const [suffix, versioned] of versionedGroups) {
+  for (const [key, versioned] of versionedGroups) {
     versioned.sort((a, b) => {
       const cmp = compareVersions(b, a);
       if (cmp !== 0) return cmp;
@@ -222,10 +279,17 @@ export function groupByVariant(
     const latest = versioned.length > 0 ? versioned[0] : null;
     const older = versioned.slice(1);
 
-    const matchingFloating = floatingTags.filter((f) => f.suffix === suffix);
+    const parts = key.split("\0");
+    const groupPrefix = parts[0];
+    const groupSuffix = parts[1] ?? "";
+
+    const matchingFloating = floatingTags.filter(
+      (f) => f.prefix === groupPrefix && f.suffix === groupSuffix,
+    );
 
     result.push({
-      suffix,
+      prefix: groupPrefix,
+      suffix: groupSuffix,
       latest,
       older,
       floating: matchingFloating,
@@ -233,14 +297,15 @@ export function groupByVariant(
   }
 
   const nonMatchedFloating = floatingTags.filter(
-    (f) => !versionedGroups.has(f.suffix),
+    (f) => !result.some((v) => v.prefix === f.prefix && v.suffix === f.suffix),
   );
 
-  const defaultVariant = result.find((v) => v.suffix === "");
+  const defaultVariant = result.find((v) => v.prefix === "" && v.suffix === "");
   if (defaultVariant) {
     defaultVariant.floating.push(...nonMatchedFloating);
   } else if (nonMatchedFloating.length > 0) {
     result.push({
+      prefix: "",
       suffix: "",
       latest: null,
       older: [],
@@ -249,6 +314,8 @@ export function groupByVariant(
   }
 
   return result.sort((a, b) => {
+    if (a.prefix === "" && a.suffix === "" && (b.prefix !== "" || b.suffix !== "")) return -1;
+    if (b.prefix === "" && b.suffix === "" && (a.prefix !== "" || a.suffix !== "")) return 1;
     if (a.suffix === "" && b.suffix !== "") return -1;
     if (a.suffix !== "" && b.suffix === "") return 1;
     return a.suffix.localeCompare(b.suffix);
@@ -262,7 +329,7 @@ export function findMatchingVariant(
   const current = parseTag(currentTag);
 
   for (const variant of variants) {
-    if (variant.suffix === current.suffix) {
+    if (variant.prefix === current.prefix && variant.suffix === current.suffix) {
       return variant;
     }
   }
@@ -288,7 +355,7 @@ function reconstructTag(
   suffix: string,
 ): string {
   let result = prefix + version;
-  if (suffix) {
+  if (suffix && !prefix.startsWith(suffix + "-")) {
     result += "-" + suffix;
   }
   return result;

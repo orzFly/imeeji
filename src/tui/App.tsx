@@ -9,7 +9,9 @@ type View = "list" | "picker" | "context" | "variants";
 
 function findVariantIndex(update: ImageUpdate): number {
   if (!update.currentVariant) return 0;
-  return update.variants.findIndex((v) => v.suffix === update.currentVariant!.suffix);
+  return update.variants.findIndex(
+    (v) => v.prefix === update.currentVariant!.prefix && v.suffix === update.currentVariant!.suffix
+  );
 }
 
 interface AppProps {
