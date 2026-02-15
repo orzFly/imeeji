@@ -18,7 +18,10 @@ Deno.test("mapPool - respects concurrency limit", async () => {
 });
 
 Deno.test("mapPool - returns empty array for empty input", async () => {
-  const results = await mapPool([], 5, async (n: number) => n);
+  const results = await mapPool([], 5, async (n: number) => {
+    await Promise.resolve();
+    return n;
+  });
   assertEquals(results, []);
 });
 

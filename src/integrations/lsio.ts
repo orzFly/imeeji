@@ -28,7 +28,9 @@ export interface LsioImageMetadata {
 
 const LSIO_API_URL = "https://api.linuxserver.io/api/v1/images";
 
-export async function fetchLsioMetadata(): Promise<Map<string, LsioImageMetadata> | null> {
+export async function fetchLsioMetadata(): Promise<
+  Map<string, LsioImageMetadata> | null
+> {
   try {
     const response = await myFetch(LSIO_API_URL);
     if (!response.ok) return null;

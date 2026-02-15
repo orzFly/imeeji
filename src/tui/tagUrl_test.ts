@@ -38,7 +38,10 @@ Deno.test("getTagUrl - Quay.io image", () => {
 
 Deno.test("getTagUrl - Quay.io encodes special chars in tag", () => {
   const url = getTagUrl("quay.io", "myorg/myapp", "v1.2-beta");
-  assertEquals(url, "https://quay.io/repository/myorg/myapp?tab=tags&tag=v1.2-beta");
+  assertEquals(
+    url,
+    "https://quay.io/repository/myorg/myapp?tab=tags&tag=v1.2-beta",
+  );
 });
 
 Deno.test("getTagUrl - Unknown registry returns null", () => {

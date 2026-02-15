@@ -1,7 +1,16 @@
 import { fetchTagsEnriched, getRepositoryKey } from "./registry.ts";
-import { findBestUpgrade, findMatchingVariant, groupByVariant } from "./analyzer.ts";
-import type { ImageRef, ImageUpdate, TagFetchResult, VariantGroup } from "./types.ts";
-import { fetchLsioMetadata, getLsioFloatingTags, isLinuxServerRepo } from "./integrations/lsio.ts";
+import { findMatchingVariant, groupByVariant } from "./analyzer.ts";
+import type {
+  ImageRef,
+  ImageUpdate,
+  TagFetchResult,
+  VariantGroup,
+} from "./types.ts";
+import {
+  fetchLsioMetadata,
+  getLsioFloatingTags,
+  isLinuxServerRepo,
+} from "./integrations/lsio.ts";
 
 export interface ParsedImageRef {
   registry: string;
@@ -41,7 +50,9 @@ export function parseImageRef(input: string): ParsedImageRef {
     remaining = `library/${remaining}`;
   }
 
-  const fullWithTag = tag ? `${registry}/${remaining}:${tag}` : `${registry}/${remaining}`;
+  const fullWithTag = tag
+    ? `${registry}/${remaining}:${tag}`
+    : `${registry}/${remaining}`;
 
   return {
     registry,
@@ -54,7 +65,9 @@ export function parseImageRef(input: string): ParsedImageRef {
 function findDefaultVariant(variants: VariantGroup[]): number {
   for (let i = 0; i < variants.length; i++) {
     const v = variants[i];
-    if (v.prefix === "" && v.suffix === "" && v.latest && !v.latest.isFloating) {
+    if (
+      v.prefix === "" && v.suffix === "" && v.latest && !v.latest.isFloating
+    ) {
       return i;
     }
   }
@@ -80,8 +93,8 @@ function findVariantWithTag(tag: string, variants: VariantGroup[]): number {
   for (let i = 0; i < variants.length; i++) {
     const v = variants[i];
     if (v.latest?.original === tag) return i;
-    if (v.older.some(t => t.original === tag)) return i;
-    if (v.floating.some(t => t.original === tag)) return i;
+    if (v.older.some((t) => t.original === tag)) return i;
+    if (v.floating.some((t) => t.original === tag)) return i;
   }
 
   const parsed = tag;
@@ -95,7 +108,9 @@ function findVariantWithTag(tag: string, variants: VariantGroup[]): number {
 
 export async function fetchImageVariants(
   parsed: ParsedImageRef,
-): Promise<{ result: TagFetchResult; variants: VariantGroup[]; lsioMetadata?: unknown }> {
+): Promise<
+  { result: TagFetchResult; variants: VariantGroup[]; lsioMetadata?: unknown }
+> {
   const result = await fetchTagsEnriched(parsed.registry, parsed.repository);
 
   if (result.tags.length === 0) {
@@ -107,7 +122,9 @@ export async function fetchImageVariants(
     lsioMetadata = await fetchLsioMetadata();
   }
 
-  const repoKey = `linuxserver/${parsed.repository.replace("linuxserver/", "")}`;
+  const repoKey = `linuxserver/${
+    parsed.repository.replace("linuxserver/", "")
+  }`;
   const lsioMeta = lsioMetadata?.get(repoKey);
   const floatingTags = lsioMeta ? getLsioFloatingTags(lsioMeta) : undefined;
 

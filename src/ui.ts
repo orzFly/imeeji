@@ -1,6 +1,9 @@
+import process from "node:process";
 import type { ImageRef, ImageUpdate } from "./types.ts";
 
-function formatImageName(image: { registry: string; repository: string }): string {
+function formatImageName(
+  image: { registry: string; repository: string },
+): string {
   return `${image.registry}/${image.repository}`;
 }
 
@@ -18,7 +21,9 @@ function printSummaryTable(updates: ImageUpdate[]): void {
   console.log("\n\ud83d\udccb Upgrade Summary:\n");
 
   for (const u of updates) {
-    const name = truncate(formatImageName(u.image), nameWidth).padEnd(nameWidth);
+    const name = truncate(formatImageName(u.image), nameWidth).padEnd(
+      nameWidth,
+    );
     const current = truncate(u.currentTag, 20).padEnd(20);
     const newTag = truncate(u.newTag, 20);
     console.log(`  ${name}  ${current} \u2192 ${newTag}`);

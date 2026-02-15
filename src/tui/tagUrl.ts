@@ -6,9 +6,13 @@ export function getTagUrl(
   if (registry === "docker.io") {
     if (repository.startsWith("library/")) {
       const image = repository.slice("library/".length);
-      return `https://hub.docker.com/_/${image}/tags?name=${encodeURIComponent(tag)}`;
+      return `https://hub.docker.com/_/${image}/tags?name=${
+        encodeURIComponent(tag)
+      }`;
     }
-    return `https://hub.docker.com/r/${repository}/tags?name=${encodeURIComponent(tag)}`;
+    return `https://hub.docker.com/r/${repository}/tags?name=${
+      encodeURIComponent(tag)
+    }`;
   }
 
   if (registry === "ghcr.io") {
@@ -20,7 +24,9 @@ export function getTagUrl(
   }
 
   if (registry === "quay.io") {
-    return `https://quay.io/repository/${repository}?tab=tags&tag=${encodeURIComponent(tag)}`;
+    return `https://quay.io/repository/${repository}?tab=tags&tag=${
+      encodeURIComponent(tag)
+    }`;
   }
 
   return null;

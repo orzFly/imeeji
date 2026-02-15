@@ -70,7 +70,9 @@ export function TagPicker({
   const shortcuts = [
     { key: "ESC", label: "Back" },
     { key: "RET", label: "Select" },
-    ...(update.variants.length > 1 ? [{ key: "TAB", label: "Change Variant" }] : []),
+    ...(update.variants.length > 1
+      ? [{ key: "TAB", label: "Change Variant" }]
+      : []),
   ];
 
   return (
@@ -79,7 +81,9 @@ export function TagPicker({
         <TitleBar title="Select Version" subtitle={imageName} />
       </Box>
       <Box marginBottom={1}>
-        <Text dimColor>Current: {update.currentTag} | Variant: {formatVariantLabel(variant)}</Text>
+        <Text dimColor>
+          Current: {update.currentTag} | Variant: {formatVariantLabel(variant)}
+        </Text>
       </Box>
 
       {changelog.length > 0 && (
@@ -87,8 +91,11 @@ export function TagPicker({
           <Text bold>Recent Changes:</Text>
           {changelog.map((entry, idx) => (
             <Box key={idx}>
-              <Text dimColor>{entry.date}: </Text>
-              <Text>{entry.description.slice(0, 60)}{entry.description.length > 60 ? "..." : ""}</Text>
+              <Text dimColor>{entry.date}:</Text>
+              <Text>
+                {entry.description.slice(0, 60)}
+                {entry.description.length > 60 ? "..." : ""}
+              </Text>
             </Box>
           ))}
         </Box>
@@ -104,8 +111,16 @@ export function TagPicker({
         const idx = visibleRange.start + relIdx;
         const isHighlighted = idx === cursor;
         const isCurrent = tag === update.currentTag;
-        const tagUrl = getTagUrl(update.image.registry, update.image.repository, tag);
-        const suffix = `${isCurrent ? "*" : ""}${idx === 0 && variant.latest && tag === variant.latest.original ? " (latest)" : ""}`;
+        const tagUrl = getTagUrl(
+          update.image.registry,
+          update.image.repository,
+          tag,
+        );
+        const suffix = `${isCurrent ? "*" : ""}${
+          idx === 0 && variant.latest && tag === variant.latest.original
+            ? " (latest)"
+            : ""
+        }`;
 
         return (
           <Box key={tag}>

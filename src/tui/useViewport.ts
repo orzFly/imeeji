@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 interface UseViewportOptions {
   itemCount: number;
@@ -14,7 +14,9 @@ interface UseViewportResult {
   moveDown: () => void;
 }
 
-export function useViewport({ itemCount, viewportHeight }: UseViewportOptions): UseViewportResult {
+export function useViewport(
+  { itemCount, viewportHeight }: UseViewportOptions,
+): UseViewportResult {
   const [cursor, setCursorState] = useState(0);
 
   const visibleRange = useMemo(() => {

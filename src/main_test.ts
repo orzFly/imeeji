@@ -1,5 +1,10 @@
 import { assertEquals } from "@std/assert";
-import { findBestUpgrade, findMatchingVariant, groupByVariant, parseTag } from "./analyzer.ts";
+import {
+  findBestUpgrade,
+  findMatchingVariant,
+  groupByVariant,
+  parseTag,
+} from "./analyzer.ts";
 import { findImages } from "./parser.ts";
 
 Deno.test("parseTag - standard version with suffix", () => {
@@ -447,7 +452,9 @@ Deno.test("groupByVariant - with digest map re-parsing", () => {
   ]);
   const variants = groupByVariant(tags, digestMap);
 
-  const defaultVariant = variants.find((v) => v.prefix === "" && v.suffix === "");
+  const defaultVariant = variants.find((v) =>
+    v.prefix === "" && v.suffix === ""
+  );
   assertEquals(defaultVariant?.latest?.original, "8.0.44-35");
   assertEquals(defaultVariant?.older.length, 2);
 
@@ -686,12 +693,16 @@ Deno.test("groupByVariant - imagegenius with suffix inference", () => {
   ];
   const variants = groupByVariant(tags);
 
-  const suffixNoml = variants.find((v) => v.prefix === "" && v.suffix === "noml");
+  const suffixNoml = variants.find((v) =>
+    v.prefix === "" && v.suffix === "noml"
+  );
   assertEquals(suffixNoml?.latest?.original, "2.5.6-noml");
   assertEquals(suffixNoml?.older.length, 1);
   assertEquals(suffixNoml?.older[0].original, "2.4.1-noml");
 
-  const prefixNoml = variants.find((v) => v.prefix === "noml-v" && v.suffix === "");
+  const prefixNoml = variants.find((v) =>
+    v.prefix === "noml-v" && v.suffix === ""
+  );
   assertEquals(prefixNoml?.latest?.original, "noml-v2.5.6-ig356");
   assertEquals(prefixNoml?.older.length, 1);
   assertEquals(prefixNoml?.older[0].original, "noml-v2.4.1-ig300");
@@ -717,10 +728,14 @@ Deno.test("groupByVariant - arch tags separate groups", () => {
   const tags = ["amd64-2.5.6", "2.5.6"];
   const variants = groupByVariant(tags);
 
-  const amd64Variant = variants.find((v) => v.prefix === "amd64-" && v.suffix === "");
+  const amd64Variant = variants.find((v) =>
+    v.prefix === "amd64-" && v.suffix === ""
+  );
   assertEquals(amd64Variant?.latest?.original, "amd64-2.5.6");
 
-  const defaultVariant = variants.find((v) => v.prefix === "" && v.suffix === "");
+  const defaultVariant = variants.find((v) =>
+    v.prefix === "" && v.suffix === ""
+  );
   assertEquals(defaultVariant?.latest?.original, "2.5.6");
 });
 
@@ -728,7 +743,9 @@ Deno.test("groupByVariant - v-prefix separate group", () => {
   const tags = ["v1.2.3-alpine", "1.3.0-alpine"];
   const variants = groupByVariant(tags);
 
-  const vAlpine = variants.find((v) => v.prefix === "v" && v.suffix === "alpine");
+  const vAlpine = variants.find((v) =>
+    v.prefix === "v" && v.suffix === "alpine"
+  );
   assertEquals(vAlpine?.latest?.original, "v1.2.3-alpine");
 
   const alpine = variants.find((v) => v.prefix === "" && v.suffix === "alpine");
@@ -775,7 +792,9 @@ Deno.test("parseTag - git hash build with arch prefix", () => {
 Deno.test("groupByVariant - git hash build tags", () => {
   const tags = ["b3d6b63f-ls37", "a1c2d3e4-ls45", "latest"];
   const variants = groupByVariant(tags);
-  const defaultVariant = variants.find((v) => v.prefix === "" && v.suffix === "");
+  const defaultVariant = variants.find((v) =>
+    v.prefix === "" && v.suffix === ""
+  );
   assertEquals(defaultVariant?.latest?.original, "a1c2d3e4-ls45");
   assertEquals(defaultVariant?.older.length, 1);
   assertEquals(defaultVariant?.older[0].original, "b3d6b63f-ls37");
@@ -792,7 +811,9 @@ Deno.test("groupByVariant - lsio v4 as floating", () => {
   const tags = ["v4", "4.0.0"];
   const floatingTags = new Set(["v4"]);
   const variants = groupByVariant(tags, undefined, floatingTags);
-  const defaultVariant = variants.find((v) => v.prefix === "" && v.suffix === "");
+  const defaultVariant = variants.find((v) =>
+    v.prefix === "" && v.suffix === ""
+  );
   assertEquals(defaultVariant?.latest?.original, "4.0.0");
   assertEquals(defaultVariant?.floating.length, 1);
   assertEquals(defaultVariant?.floating[0].original, "v4");
@@ -802,7 +823,9 @@ Deno.test("groupByVariant - lsio develop nightly floating", () => {
   const tags = ["develop", "nightly", "3.0.0"];
   const floatingTags = new Set(["develop", "nightly"]);
   const variants = groupByVariant(tags, undefined, floatingTags);
-  const defaultVariant = variants.find((v) => v.prefix === "" && v.suffix === "");
+  const defaultVariant = variants.find((v) =>
+    v.prefix === "" && v.suffix === ""
+  );
   assertEquals(defaultVariant?.latest?.original, "3.0.0");
   assertEquals(defaultVariant?.floating.length, 2);
   const floatingNames = defaultVariant?.floating.map((t) => t.original) ?? [];
@@ -834,8 +857,16 @@ Deno.test("groupByVariant - nginx 1.9 vs 1.29 ordering", () => {
   const alpineVariant = variants.find((v) => v.suffix === "alpine");
   assertEquals(alpineVariant?.latest?.original, "1.29.5-alpine");
   const olderTags = alpineVariant?.older.map((t) => t.original) ?? [];
-  assertEquals(olderTags.indexOf("1.29.4-alpine") < olderTags.indexOf("1.29-alpine"), true);
-  assertEquals(olderTags.indexOf("1.29-alpine") < olderTags.indexOf("1.28-alpine"), true);
-  assertEquals(olderTags.indexOf("1.9-alpine") < olderTags.indexOf("1.8-alpine"), true);
+  assertEquals(
+    olderTags.indexOf("1.29.4-alpine") < olderTags.indexOf("1.29-alpine"),
+    true,
+  );
+  assertEquals(
+    olderTags.indexOf("1.29-alpine") < olderTags.indexOf("1.28-alpine"),
+    true,
+  );
+  assertEquals(
+    olderTags.indexOf("1.9-alpine") < olderTags.indexOf("1.8-alpine"),
+    true,
+  );
 });
-

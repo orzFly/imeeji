@@ -1,5 +1,8 @@
 import { myFetch } from "./fetch.ts";
-import { fetchDockerHubTags, isDockerHubRepository } from "./integrations/dockerHub.ts";
+import {
+  fetchDockerHubTags,
+  isDockerHubRepository,
+} from "./integrations/dockerHub.ts";
 
 export interface AuthChallenge {
   realm: string;
@@ -21,7 +24,9 @@ function getRegistryHost(registry: string): string {
 }
 
 export function parseWwwAuthenticate(header: string): AuthChallenge | null {
-  if (header.length < 7 || header.slice(0, 7).toLowerCase() !== "bearer ") return null;
+  if (header.length < 7 || header.slice(0, 7).toLowerCase() !== "bearer ") {
+    return null;
+  }
   const params = header.slice(7);
   if (!params) return null;
 
@@ -38,7 +43,9 @@ export function parseWwwAuthenticate(header: string): AuthChallenge | null {
   return result;
 }
 
-async function requestOciToken(challenge: AuthChallenge): Promise<string | null> {
+async function requestOciToken(
+  challenge: AuthChallenge,
+): Promise<string | null> {
   let url = challenge.realm;
   const params = new URLSearchParams();
   if (challenge.service) params.set("service", challenge.service);
@@ -164,7 +171,9 @@ export async function fetchTagsEnriched(
   registry: string,
   repository: string,
   currentTag?: string,
-): Promise<{ tags: string[]; digestMap?: Map<string, string>; foundCurrentTag?: boolean }> {
+): Promise<
+  { tags: string[]; digestMap?: Map<string, string>; foundCurrentTag?: boolean }
+> {
   if (isDockerHubRepository(registry)) {
     return fetchDockerHubTags(repository, currentTag);
   }

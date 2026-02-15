@@ -44,7 +44,8 @@ export async function fetchDockerHubTags(
   const digestMap = new Map<string, string>();
   let foundCurrentTag = currentTag ? false : undefined;
   let page = 1;
-  let nextUrl: string | null = `${DOCKER_HUB_API}/v2/namespaces/${namespace}/repositories/${repo}/tags?page_size=100`;
+  let nextUrl: string | null =
+    `${DOCKER_HUB_API}/v2/namespaces/${namespace}/repositories/${repo}/tags?page_size=100`;
 
   while (nextUrl && page <= MAX_PAGES) {
     try {

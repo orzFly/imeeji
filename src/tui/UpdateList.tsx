@@ -70,7 +70,10 @@ export function UpdateList({
     }
   });
 
-  const visibleUpdates = updates.slice(scrollOffset, scrollOffset + viewportItems);
+  const visibleUpdates = updates.slice(
+    scrollOffset,
+    scrollOffset + viewportItems,
+  );
   const aboveCount = scrollOffset;
   const belowCount = Math.max(0, updates.length - scrollOffset - viewportItems);
 
@@ -121,16 +124,30 @@ export function UpdateList({
                 {truncate(formatImageName(u.image), imageNameMax)}
               </Text>
               {u.lsioMetadata?.deprecated && (
-                <Text color="red" bold> DEPRECATED</Text>
+                <Text color="red" bold>DEPRECATED</Text>
               )}
-              <Text dimColor> {location}</Text>
+              <Text dimColor>{location}</Text>
             </Box>
             <Box marginLeft={4}>
-              <Link url={getTagUrl(u.image.registry, u.image.repository, u.currentTag)} dimColor>
+              <Link
+                url={getTagUrl(
+                  u.image.registry,
+                  u.image.repository,
+                  u.currentTag,
+                )}
+                dimColor
+              >
                 {truncate(u.currentTag, tagMax)}
               </Link>
-              <Text dimColor> → </Text>
-              <Link url={getTagUrl(u.image.registry, u.image.repository, displayTag)} color="green">
+              <Text dimColor>→</Text>
+              <Link
+                url={getTagUrl(
+                  u.image.registry,
+                  u.image.repository,
+                  displayTag,
+                )}
+                color="green"
+              >
                 {truncate(displayTag, tagMax)}
               </Link>
             </Box>

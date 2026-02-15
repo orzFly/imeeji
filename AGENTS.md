@@ -4,7 +4,9 @@ Instructions for AI agents working on this codebase.
 
 ## Project Overview
 
-imeeji is an interactive Docker image upgrade tool. It scans files for Docker image references, checks for available updates, and provides an interactive TUI for selecting which images to upgrade.
+imeeji is an interactive Docker image upgrade tool. It scans files for Docker
+image references, checks for available updates, and provides an interactive TUI
+for selecting which images to upgrade.
 
 ## Tech Stack
 
@@ -22,7 +24,9 @@ deno task dev             # Run with watch mode
 
 ## Dependency Management
 
-**IMPORTANT**: Always use `deno add` to add dependencies, NOT `deno cache`. The `deno cache` command only caches the dependency locally but does not add it to `deno.json`, which causes type-checking to fail for others.
+**IMPORTANT**: Always use `deno add` to add dependencies, NOT `deno cache`. The
+`deno cache` command only caches the dependency locally but does not add it to
+`deno.json`, which causes type-checking to fail for others.
 
 ```bash
 # Correct - adds to deno.json
@@ -33,11 +37,13 @@ deno cache npm:package-name
 ```
 
 For JSX projects, you must add both React and the JSX runtime:
+
 ```bash
 deno add npm:react@19 npm:react@19/jsx-runtime
 ```
 
-Note: Use React 19 for compatibility with Ink 6 (which has a peer dependency on React ^19).
+Note: Use React 19 for compatibility with Ink 6 (which has a peer dependency on
+React ^19).
 
 ## Code Style
 

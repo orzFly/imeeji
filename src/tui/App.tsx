@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import type { ImageRef, ImageUpdate } from "../types.ts";
 import { UpdateList } from "./UpdateList.tsx";
 import { TagPicker } from "./TagPicker.tsx";
@@ -10,7 +10,9 @@ type View = "list" | "picker" | "context" | "variants";
 function findVariantIndex(update: ImageUpdate): number {
   if (!update.currentVariant) return 0;
   return update.variants.findIndex(
-    (v) => v.prefix === update.currentVariant!.prefix && v.suffix === update.currentVariant!.suffix
+    (v) =>
+      v.prefix === update.currentVariant!.prefix &&
+      v.suffix === update.currentVariant!.suffix,
   );
 }
 
@@ -23,7 +25,9 @@ interface AppProps {
 
 export function App({ updates, filePath, fileContent, onDone }: AppProps) {
   const [cursor, setCursor] = useState(0);
-  const [selected, setSelected] = useState<Set<number>>(() => new Set(updates.map((_, i) => i)));
+  const [selected, setSelected] = useState<Set<number>>(() =>
+    new Set(updates.map((_, i) => i))
+  );
   const [overrides, setOverrides] = useState<Map<number, string>>(new Map());
   const [view, setView] = useState<View>("list");
   const [pickerImageIdx, setPickerImageIdx] = useState(0);

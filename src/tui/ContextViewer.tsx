@@ -31,7 +31,8 @@ export function ContextViewer({
   const startLine = Math.max(1, clampedLine - halfWindow);
   const endLine = Math.min(lines.length, clampedLine + halfWindow);
 
-  const contextLines: { num: number; content: string; isTarget: boolean }[] = [];
+  const contextLines: { num: number; content: string; isTarget: boolean }[] =
+    [];
 
   for (let i = startLine; i <= endLine; i++) {
     contextLines.push({

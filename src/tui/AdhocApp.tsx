@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import type { ImageUpdate, VariantGroup } from "../types.ts";
 import type { ParsedImageRef } from "../adhoc.ts";
 import { TagPicker } from "./TagPicker.tsx";
@@ -9,7 +9,9 @@ type View = "variant" | "tag";
 function findVariantIndex(update: ImageUpdate): number {
   if (!update.currentVariant) return 0;
   return update.variants.findIndex(
-    (v: VariantGroup) => v.prefix === update.currentVariant!.prefix && v.suffix === update.currentVariant!.suffix
+    (v: VariantGroup) =>
+      v.prefix === update.currentVariant!.prefix &&
+      v.suffix === update.currentVariant!.suffix,
   );
 }
 
@@ -20,12 +22,16 @@ interface AdhocAppProps {
   onDone: (tag: string | null) => void;
 }
 
-function AdhocApp({ update, parsed, startWithVariantPicker, onDone }: AdhocAppProps) {
+function AdhocApp(
+  { update, parsed: _parsed, startWithVariantPicker, onDone }: AdhocAppProps,
+) {
   const initialVariantIdx = startWithVariantPicker
     ? 0
     : findVariantIndex(update);
 
-  const [view, setView] = useState<View>(startWithVariantPicker ? "variant" : "tag");
+  const [view, setView] = useState<View>(
+    startWithVariantPicker ? "variant" : "tag",
+  );
   const [variantIdx, setVariantIdx] = useState(initialVariantIdx);
 
   const handleQuit = useCallback(() => {

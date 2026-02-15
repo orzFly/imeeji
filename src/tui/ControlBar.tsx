@@ -13,7 +13,10 @@ interface ControlBarProps {
 export function ControlBar({ shortcuts }: ControlBarProps) {
   const { columns } = useTerminalSize();
 
-  const itemsPerRow = Math.max(1, Math.floor(shortcuts.length / 2) + (shortcuts.length % 2));
+  const itemsPerRow = Math.max(
+    1,
+    Math.floor(shortcuts.length / 2) + (shortcuts.length % 2),
+  );
   const row1 = shortcuts.slice(0, itemsPerRow);
   const row2 = shortcuts.slice(itemsPerRow);
 

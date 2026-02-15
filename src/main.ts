@@ -1,4 +1,5 @@
 import { parseArgs } from "@std/cli/parse-args";
+import process from "node:process";
 import { readFile, writeFile } from "node:fs/promises";
 import { findImages } from "./parser.ts";
 import { fetchTagsEnriched, getRepositoryKey } from "./registry.ts";
@@ -11,7 +12,11 @@ import { selectUpdates } from "./ui.ts";
 import { applyUpdates as applyPatches, generateDiff } from "./patcher.ts";
 import type { ImageUpdate, TagFetchResult } from "./types.ts";
 import { mapPool } from "./pool.ts";
-import { fetchLsioMetadata, getLsioFloatingTags, isLinuxServerRepo } from "./integrations/lsio.ts";
+import {
+  fetchLsioMetadata,
+  getLsioFloatingTags,
+  isLinuxServerRepo,
+} from "./integrations/lsio.ts";
 import { parseImageRef, runAdhocMode } from "./adhoc.ts";
 
 const VERSION = "0.1.0";
@@ -116,7 +121,11 @@ async function main(): Promise<void> {
 
   const [results, lsioMetadata] = await Promise.all([
     mapPool(uniqueEntries, 8, async ([key, image]) => {
-      const result = await fetchTagsEnriched(image.registry, image.repository, image.tag);
+      const result = await fetchTagsEnriched(
+        image.registry,
+        image.repository,
+        image.tag,
+      );
       return { key, result };
     }),
     lsioMetadataPromise ?? Promise.resolve(null),
@@ -132,7 +141,9 @@ async function main(): Promise<void> {
     if (result.foundCurrentTag === false) {
       const image = uniqueEntries.find(([k]) => k === key)?.[1];
       if (image) {
-        warnings.push(`WARNING: Current tag '${image.tag}' for ${key} not found in recent ${result.tags.length} tags - may be very old`);
+        warnings.push(
+          `WARNING: Current tag '${image.tag}' for ${key} not found in recent ${result.tags.length} tags - may be very old`,
+        );
       }
     }
   }
@@ -156,7 +167,9 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const repoKey = `linuxserver/${image.repository.replace("linuxserver/", "")}`;
+    const repoKey = `linuxserver/${
+      image.repository.replace("linuxserver/", "")
+    }`;
     const lsioMeta = lsioMetadata?.get(repoKey);
     const floatingTags = lsioMeta ? getLsioFloatingTags(lsioMeta) : undefined;
 
@@ -180,7 +193,12 @@ async function main(): Promise<void> {
     return;
   }
 
-  const selectedUpdates = await selectUpdates(updates, autoYes, filePath, content);
+  const selectedUpdates = await selectUpdates(
+    updates,
+    autoYes,
+    filePath,
+    content,
+  );
 
   if (selectedUpdates.length === 0) {
     console.log("No updates applied.");
@@ -204,8 +222,11 @@ function isMainModule(): boolean {
   }
   if (typeof process !== "undefined" && process.argv?.[1]) {
     try {
-      const { URL, pathToFileURL } = require("node:url") as typeof import("node:url");
-      return new URL(import.meta.url).href === pathToFileURL(process.argv[1]).href;
+      const { URL, pathToFileURL } = require(
+        "node:url",
+      ) as typeof import("node:url");
+      return new URL(import.meta.url).href ===
+        pathToFileURL(process.argv[1]).href;
     } catch {
       return false;
     }

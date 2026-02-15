@@ -72,9 +72,12 @@ export function VariantPicker({
         for (const t of v.older.slice(0, 2)) {
           preview.push(t.original);
         }
-        const previewStr = preview.join(", ") + (v.older.length > 2 ? " …" : "");
+        const previewStr = preview.join(", ") +
+          (v.older.length > 2 ? " …" : "");
 
-        const floatingStr = v.floating.slice(0, 2).map((t) => t.original).join(", ");
+        const floatingStr = v.floating.slice(0, 2).map((t) => t.original).join(
+          ", ",
+        );
 
         return (
           <Box key={idx} flexDirection="column" marginBottom={1}>
