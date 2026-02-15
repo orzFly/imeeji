@@ -1,5 +1,5 @@
-import process from "node:process";
 import type { ImageRef, ImageUpdate } from "./types.ts";
+import { enterAlternateBuffer } from "./alternateBuffer.ts";
 
 function formatImageName(
   image: { registry: string; repository: string },
@@ -60,25 +60,7 @@ export async function selectUpdates(
   const { App } = await import("./tui/App.tsx");
   const { createElement } = await import("react");
 
-  const ENTER_ALT = "\x1b[?1049h";
-  const EXIT_ALT = "\x1b[?1049l";
-
-  let cleaned = false;
-  const cleanup = () => {
-    if (cleaned) return;
-    cleaned = true;
-    process.stdout.write(EXIT_ALT);
-  };
-
-  const sigintHandler = () => {
-    cleanup();
-    process.exit(130);
-  };
-
-  process.on("SIGINT", sigintHandler);
-  globalThis.addEventListener("unload", cleanup);
-
-  process.stdout.write(ENTER_ALT);
+  const cleanup = enterAlternateBuffer();
 
   return new Promise<ImageRef[]>((resolve) => {
     const app = render(
@@ -88,7 +70,6 @@ export async function selectUpdates(
         onDone: (results: ImageRef[]) => {
           app.unmount();
           cleanup();
-          process.off("SIGINT", sigintHandler);
           resolve(results);
         },
       }),

@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import type { ImageUpdate } from "../types.ts";
 import type { ParsedImageRef } from "../adhoc.ts";
 import { findVariantIndex } from "../analyzer.ts";
+import { enterAlternateBuffer } from "../alternateBuffer.ts";
 import { TagPicker } from "./TagPicker.tsx";
 import { VariantPicker } from "./VariantPicker.tsx";
 
@@ -66,6 +67,8 @@ export async function selectAdhocImage(
   const { render } = await import("ink");
   const { createElement } = await import("react");
 
+  const cleanup = enterAlternateBuffer();
+
   return new Promise<string | null>((resolve) => {
     const app = render(
       createElement(AdhocApp, {
@@ -74,9 +77,11 @@ export async function selectAdhocImage(
         startWithVariantPicker,
         onDone: (result: string | null) => {
           app.unmount();
+          cleanup();
           resolve(result);
         },
       }),
+      { exitOnCtrlC: false },
     );
   });
 }
