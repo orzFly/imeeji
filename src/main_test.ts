@@ -1,82 +1,471 @@
 import { assertEquals } from "@std/assert";
-import { groupByVariant, parseTag } from "./analyzer.ts";
+import { findBestUpgrade, groupByVariant, parseTag } from "./analyzer.ts";
 import { findImages } from "./parser.ts";
 
-Deno.test("parseTag handles semver with suffix", () => {
-  const result = parseTag("v1.2.3-alpine");
-  assertEquals(result.prefix, "v");
-  assertEquals(result.version, "1.2.3");
-  assertEquals(result.suffix, "-alpine");
+Deno.test("parseTag - standard version with suffix", () => {
+  const result = parseTag("8.6.0-alpine3.23");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "8.6.0");
+  assertEquals(result.suffix, "alpine3.23");
   assertEquals(result.isFloating, false);
 });
 
-Deno.test("parseTag handles numeric version with suffix", () => {
-  const result = parseTag("18.1-alpine");
+Deno.test("parseTag - standard version with alpine suffix", () => {
+  const result = parseTag("8.6.0-alpine");
   assertEquals(result.prefix, "");
-  assertEquals(result.version, "18.1");
-  assertEquals(result.suffix, "-alpine");
+  assertEquals(result.version, "8.6.0");
+  assertEquals(result.suffix, "alpine");
   assertEquals(result.isFloating, false);
 });
 
-Deno.test("parseTag handles plain version", () => {
-  const result = parseTag("0.1.81");
+Deno.test("parseTag - standard version no suffix", () => {
+  const result = parseTag("8.6.0");
   assertEquals(result.prefix, "");
-  assertEquals(result.version, "0.1.81");
+  assertEquals(result.version, "8.6.0");
   assertEquals(result.suffix, "");
   assertEquals(result.isFloating, false);
 });
 
-Deno.test("parseTag marks floating tags correctly", () => {
-  const latest = parseTag("latest");
-  assertEquals(latest.isFloating, true);
-  assertEquals(latest.version, "latest");
-
-  const alpine = parseTag("alpine");
-  assertEquals(alpine.isFloating, true);
-  assertEquals(alpine.suffix, "");
-
-  const rcAlpine = parseTag("rc-alpine");
-  assertEquals(rcAlpine.isFloating, true);
-  assertEquals(rcAlpine.prefix, "rc");
-  assertEquals(rcAlpine.suffix, "-alpine");
+Deno.test("parseTag - v prefix with slim suffix", () => {
+  const result = parseTag("v1.2.3-slim");
+  assertEquals(result.prefix, "v");
+  assertEquals(result.version, "1.2.3");
+  assertEquals(result.suffix, "slim");
+  assertEquals(result.isFloating, false);
 });
 
-Deno.test("parseTag handles prerelease prefixes", () => {
-  const rc = parseTag("rc1.0.0");
-  assertEquals(rc.prefix, "rc");
-  assertEquals(rc.version, "1.0.0");
-  assertEquals(rc.isFloating, false);
-
-  const beta = parseTag("beta-alpine");
-  assertEquals(beta.prefix, "beta");
-  assertEquals(beta.version, "");
-  assertEquals(beta.suffix, "-alpine");
-  assertEquals(beta.isFloating, true);
+Deno.test("parseTag - v prefix with complex suffix", () => {
+  const result = parseTag("v3.6.8-nanoserver-ltsc2022");
+  assertEquals(result.prefix, "v");
+  assertEquals(result.version, "3.6.8");
+  assertEquals(result.suffix, "nanoserver-ltsc2022");
+  assertEquals(result.isFloating, false);
 });
 
-Deno.test("groupByVariant groups by suffix", () => {
+Deno.test("parseTag - gradle jdk21-corretto-al2023", () => {
+  const result = parseTag("9.3.1-jdk21-corretto-al2023");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "9.3.1");
+  assertEquals(result.suffix, "jdk21-corretto-al2023");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - gradle jdk25-corretto", () => {
+  const result = parseTag("9.3.1-jdk25-corretto");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "9.3.1");
+  assertEquals(result.suffix, "jdk25-corretto");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - percona with build number", () => {
+  const result = parseTag("8.0.44-35");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "8.0.44-35");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - percona with build number and centos", () => {
+  const result = parseTag("8.0.44-35-centos");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "8.0.44-35");
+  assertEquals(result.suffix, "centos");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - nginx alpine3.23-perl", () => {
+  const result = parseTag("1.28.2-alpine3.23-perl");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "1.28.2");
+  assertEquals(result.suffix, "alpine3.23-perl");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - nginx trixie-perl", () => {
+  const result = parseTag("1.28.2-trixie-perl");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "1.28.2");
+  assertEquals(result.suffix, "trixie-perl");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - node bookworm-slim", () => {
+  const result = parseTag("25.6.1-bookworm-slim");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "25.6.1");
+  assertEquals(result.suffix, "bookworm-slim");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - debian slim", () => {
+  const result = parseTag("13.3-slim");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "13.3");
+  assertEquals(result.suffix, "slim");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - maven amazoncorretto", () => {
+  const result = parseTag("3.9.12-amazoncorretto-25");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "3.9.12");
+  assertEquals(result.suffix, "amazoncorretto-25");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - aws-fluent-bit date version", () => {
+  const result = parseTag("2.34.3.20260209");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "2.34.3.20260209");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - eclipse-temurin java style", () => {
+  const result = parseTag("8u482-b08-jre");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "8u482-b08");
+  assertEquals(result.suffix, "jre");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - eclipse-temurin java style no suffix", () => {
+  const result = parseTag("8u482-b08");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "8u482-b08");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - prerelease rc1", () => {
+  const result = parseTag("1.0.0-rc1");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "1.0.0-rc1");
+  assertEquals(result.suffix, "");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - prerelease rc1 with suffix", () => {
+  const result = parseTag("1.0.0-rc1-alpine");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "1.0.0-rc1");
+  assertEquals(result.suffix, "alpine");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - prerelease beta2 with suffix", () => {
+  const result = parseTag("1.0.0-beta2-slim");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "1.0.0-beta2");
+  assertEquals(result.suffix, "slim");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - maven rc with amazoncorretto", () => {
+  const result = parseTag("4.0.0-rc-5-amazoncorretto-25");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "4.0.0-rc-5");
+  assertEquals(result.suffix, "amazoncorretto-25");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - floating alpine", () => {
+  const result = parseTag("alpine");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "alpine");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating latest", () => {
+  const result = parseTag("latest");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "latest");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating bookworm-slim", () => {
+  const result = parseTag("bookworm-slim");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "bookworm-slim");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating stable-alpine3.23", () => {
+  const result = parseTag("stable-alpine3.23");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "stable-alpine3.23");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating stable-trixie", () => {
+  const result = parseTag("stable-trixie");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "stable-trixie");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating stable", () => {
+  const result = parseTag("stable");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "stable");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating mainline", () => {
+  const result = parseTag("mainline");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "mainline");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating lts-alpine3.23", () => {
+  const result = parseTag("lts-alpine3.23");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "lts-alpine3.23");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating current-alpine3.23", () => {
+  const result = parseTag("current-alpine3.23");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "current-alpine3.23");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating krypton-alpine3.22", () => {
+  const result = parseTag("krypton-alpine3.22");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "krypton-alpine3.22");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating enterprise-7.6.9", () => {
+  const result = parseTag("enterprise-7.6.9");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "enterprise-7.6.9");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating ps-8.0.44-35", () => {
+  const result = parseTag("ps-8.0.44-35");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "ps-8.0.44-35");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating psmdb-8.0.17", () => {
+  const result = parseTag("psmdb-8.0.17");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "psmdb-8.0.17");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating community-8.0.0", () => {
+  const result = parseTag("community-8.0.0");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "community-8.0.0");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating php8.4-fpm-alpine3.22", () => {
+  const result = parseTag("php8.4-fpm-alpine3.22");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "php8.4-fpm-alpine3.22");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating centos7.9.2009", () => {
+  const result = parseTag("centos7.9.2009");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "centos7.9.2009");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating trixie-20260202-slim", () => {
+  const result = parseTag("trixie-20260202-slim");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "trixie-20260202-slim");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating trixie", () => {
+  const result = parseTag("trixie");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "trixie");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - floating rc1", () => {
+  const result = parseTag("rc1");
+  assertEquals(result.prefix, "");
+  assertEquals(result.version, "");
+  assertEquals(result.suffix, "rc1");
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("groupByVariant - redis tags", () => {
   const tags = [
-    "v1.0.0",
-    "v1.0.0-alpine",
-    "v1.1.0",
-    "v1.1.0-alpine",
-    "latest",
+    "8.6.0-alpine3.23",
+    "8.6.0-alpine",
+    "8.6.0-trixie",
+    "8.6.0",
+    "8.2.4-alpine3.22",
+    "8.2.4-alpine",
+    "8.2.4",
     "alpine",
+    "latest",
+    "trixie",
   ];
   const variants = groupByVariant(tags);
 
-  assertEquals(variants.length, 2);
+  const defaultVariant = variants.find((v) => v.suffix === "");
+  assertEquals(defaultVariant?.latest?.original, "8.6.0");
+  assertEquals(defaultVariant?.older.length, 1);
+  assertEquals(defaultVariant?.older[0].original, "8.2.4");
+  assertEquals(defaultVariant?.floating.length, 1);
+  assertEquals(defaultVariant?.floating[0].original, "latest");
+
+  const alpine3_23 = variants.find((v) => v.suffix === "alpine3.23");
+  assertEquals(alpine3_23?.latest?.original, "8.6.0-alpine3.23");
+  assertEquals(alpine3_23?.older.length, 0);
+
+  const alpine3_22 = variants.find((v) => v.suffix === "alpine3.22");
+  assertEquals(alpine3_22?.latest?.original, "8.2.4-alpine3.22");
+
+  const alpine = variants.find((v) => v.suffix === "alpine");
+  assertEquals(alpine?.latest?.original, "8.6.0-alpine");
+  assertEquals(alpine?.older.length, 1);
+  assertEquals(alpine?.older[0].original, "8.2.4-alpine");
+  assertEquals(alpine?.floating.length, 1);
+  assertEquals(alpine?.floating[0].original, "alpine");
+
+  const trixie = variants.find((v) => v.suffix === "trixie");
+  assertEquals(trixie?.latest?.original, "8.6.0-trixie");
+  assertEquals(trixie?.floating.length, 1);
+  assertEquals(trixie?.floating[0].original, "trixie");
+});
+
+Deno.test("groupByVariant - gradle tags", () => {
+  const tags = [
+    "9.3.1-jdk21-corretto-al2023",
+    "9.3.1-jdk21-corretto",
+    "9.3.1-jdk17-corretto-al2023",
+    "9.3.1-jdk17-corretto",
+    "jdk21-corretto-al2023",
+    "jdk21-corretto",
+    "corretto",
+  ];
+  const variants = groupByVariant(tags);
+
+  const jdk21Al2023 = variants.find((v) => v.suffix === "jdk21-corretto-al2023");
+  assertEquals(jdk21Al2023?.latest?.original, "9.3.1-jdk21-corretto-al2023");
+  assertEquals(jdk21Al2023?.floating.length, 1);
+  assertEquals(jdk21Al2023?.floating[0].original, "jdk21-corretto-al2023");
+
+  const jdk21 = variants.find((v) => v.suffix === "jdk21-corretto");
+  assertEquals(jdk21?.latest?.original, "9.3.1-jdk21-corretto");
+  assertEquals(jdk21?.floating.length, 1);
+  assertEquals(jdk21?.floating[0].original, "jdk21-corretto");
+
+  const jdk17Al2023 = variants.find((v) => v.suffix === "jdk17-corretto-al2023");
+  assertEquals(jdk17Al2023?.latest?.original, "9.3.1-jdk17-corretto-al2023");
+  assertEquals(jdk17Al2023?.floating.length, 0);
+
+  const jdk17 = variants.find((v) => v.suffix === "jdk17-corretto");
+  assertEquals(jdk17?.latest?.original, "9.3.1-jdk17-corretto");
 
   const defaultVariant = variants.find((v) => v.suffix === "");
-  assertEquals(defaultVariant?.latest?.original, "v1.1.0");
-  assertEquals(defaultVariant?.older.length, 1);
-  assertEquals(defaultVariant?.older[0].original, "v1.0.0");
-  assertEquals(defaultVariant?.floating.length, 2);
+  assertEquals(defaultVariant?.floating.length, 1);
+  assertEquals(defaultVariant?.floating[0].original, "corretto");
+});
 
-  const alpineVariant = variants.find((v) => v.suffix === "-alpine");
-  assertEquals(alpineVariant?.latest?.original, "v1.1.0-alpine");
-  assertEquals(alpineVariant?.older.length, 1);
-  assertEquals(alpineVariant?.older[0].original, "v1.0.0-alpine");
+Deno.test("findBestUpgrade - same suffix upgrade", () => {
+  const tags = ["8.6.0-alpine", "8.2.4-alpine", "alpine"];
+  const variants = groupByVariant(tags);
+  const result = findBestUpgrade("8.2.4-alpine", variants);
+  assertEquals(result, "8.6.0-alpine");
+});
+
+Deno.test("findBestUpgrade - no other alpine3.22 tags", () => {
+  const tags = ["8.6.0-alpine3.23", "8.2.4-alpine3.22"];
+  const variants = groupByVariant(tags);
+  const result = findBestUpgrade("8.2.4-alpine3.22", variants);
+  assertEquals(result, null);
+});
+
+Deno.test("findBestUpgrade - floating tag upgrades to versioned", () => {
+  const tags = ["8.6.0-alpine", "8.2.4-alpine", "alpine"];
+  const variants = groupByVariant(tags);
+  const result = findBestUpgrade("alpine", variants);
+  assertEquals(result, "8.6.0-alpine");
+});
+
+Deno.test("findBestUpgrade - floating latest upgrades to versioned default", () => {
+  const tags = ["8.6.0", "8.2.4", "latest"];
+  const variants = groupByVariant(tags);
+  const result = findBestUpgrade("latest", variants);
+  assertEquals(result, "8.6.0");
+});
+
+Deno.test("groupByVariant - with digest map re-parsing", () => {
+  const tags = [
+    "ps-8.0.44-35",
+    "ps-8.0.43-34",
+    "8.0.44-35",
+    "8.0.43-34",
+    "8.0",
+  ];
+  const digestMap = new Map<string, string>([
+    ["ps-8.0.44-35", "D1"],
+    ["8.0.44-35", "D1"],
+    ["ps-8.0.43-34", "D2"],
+    ["8.0.43-34", "D2"],
+    ["8.0", "D3"],
+  ]);
+  const variants = groupByVariant(tags, digestMap);
+
+  const defaultVariant = variants.find((v) => v.suffix === "");
+  assertEquals(defaultVariant?.latest?.original, "8.0.44-35");
+  assertEquals(defaultVariant?.older.length, 4);
+
+  const allVersioned = defaultVariant?.latest
+    ? [defaultVariant.latest, ...defaultVariant.older]
+    : defaultVariant?.older ?? [];
+  const psTag = allVersioned.find((t) => t.original === "ps-8.0.44-35");
+  assertEquals(psTag?.prefix, "ps-");
+  assertEquals(psTag?.version, "8.0.44-35");
+});
+
+Deno.test("findBestUpgrade - preserves prefix from re-parsed tag", () => {
+  const tags = ["ps-8.0.44-35", "ps-8.0.43-34", "8.0.44-35", "8.0.43-34"];
+  const digestMap = new Map<string, string>([
+    ["ps-8.0.44-35", "D1"],
+    ["8.0.44-35", "D1"],
+    ["ps-8.0.43-34", "D2"],
+    ["8.0.43-34", "D2"],
+  ]);
+  const variants = groupByVariant(tags, digestMap);
+  const result = findBestUpgrade("ps-8.0.43-34", variants);
+  assertEquals(result, "ps-8.0.44-35");
 });
 
 Deno.test("findImages extracts docker images", () => {

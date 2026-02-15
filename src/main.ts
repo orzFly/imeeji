@@ -1,6 +1,6 @@
 import { parseArgs } from "@std/cli/parse-args";
 import { findImages } from "./parser.ts";
-import { fetchTags, getRepositoryKey } from "./registry.ts";
+import { fetchTagsEnriched, getRepositoryKey } from "./registry.ts";
 import {
   findBestUpgrade,
   findMatchingVariant,
@@ -8,7 +8,7 @@ import {
 } from "./analyzer.ts";
 import { selectUpdates } from "./ui.ts";
 import { applyUpdates as applyPatches, generateDiff } from "./patcher.ts";
-import type { ImageUpdate } from "./types.ts";
+import type { ImageUpdate, TagFetchResult } from "./types.ts";
 
 const VERSION = "0.1.0";
 
@@ -84,14 +84,14 @@ async function main(): Promise<void> {
 
   console.log(`Found ${images.length} image(s) in ${filePath}`);
 
-  const repoCache = new Map<string, string[]>();
+  const repoCache = new Map<string, TagFetchResult>();
 
   for (const image of images) {
     const key = getRepositoryKey(image.registry, image.repository);
     if (!repoCache.has(key)) {
       console.log(`Fetching tags for ${key}...`);
-      const tags = await fetchTags(image.registry, image.repository);
-      repoCache.set(key, tags);
+      const result = await fetchTagsEnriched(image.registry, image.repository);
+      repoCache.set(key, result);
       await new Promise((r) => setTimeout(r, 100));
     }
   }
@@ -100,14 +100,15 @@ async function main(): Promise<void> {
 
   for (const image of images) {
     const key = getRepositoryKey(image.registry, image.repository);
-    const tags = repoCache.get(key) ?? [];
+    const result = repoCache.get(key);
+    const tags = result?.tags ?? [];
 
     if (tags.length === 0) {
       console.log(`  Skipping ${key}: no tags available`);
       continue;
     }
 
-    const variants = groupByVariant(tags);
+    const variants = groupByVariant(tags, result?.digestMap);
     const newTag = findBestUpgrade(image.tag, variants);
 
     if (newTag) {

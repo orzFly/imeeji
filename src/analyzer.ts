@@ -1,110 +1,68 @@
 import { compare, parse as parseSemver } from "@std/semver";
 import type { ParsedTag, VariantGroup } from "./types.ts";
 
-const COMMON_SUFFIXES = [
-  "-alpine",
-  "-slim",
-  "-debian",
-  "-ubuntu",
-  "-bullseye",
-  "-bookworm",
-  "-buster",
-  "-focal",
-  "-jammy",
-  "-bionic",
-  "-amd64",
-  "-arm64",
-  "-arm",
-  "-windowsservercore",
-  "-nanoserver",
-];
-
-const COMMON_PREFIXES = [
-  "release-",
-  "stable-",
-];
-
-const PRERELEASE_PREFIXES = [
-  "rc",
-  "beta",
-  "alpha",
-  "dev",
-  "preview",
-  "canary",
-  "nightly",
-];
+const JAVA_STYLE_REGEX = /^(\d+u\d+(?:-b\d+)?)(?:-(.+))?$/;
+const STANDARD_VERSION_REGEX = /^(\d+(?:[._]\d+)*(?:-(?:rc|beta|alpha|dev|preview|canary|nightly)\d*)?(?:-\d+)*)(?:-(.+))?$/i;
 
 export function parseTag(tag: string): ParsedTag {
   let remaining = tag;
   let prefix = "";
-  let suffix = "";
-
-  for (const s of COMMON_SUFFIXES) {
-    const lowerRemaining = remaining.toLowerCase();
-    const lowerSuffix = s.toLowerCase();
-    if (lowerRemaining.endsWith(lowerSuffix)) {
-      suffix = remaining.slice(lowerRemaining.length - lowerSuffix.length);
-      remaining = remaining.slice(
-        0,
-        lowerRemaining.length - lowerSuffix.length,
-      );
-      break;
-    }
-  }
-
-  for (const p of COMMON_PREFIXES) {
-    if (remaining.toLowerCase().startsWith(p.toLowerCase())) {
-      prefix = p;
-      remaining = remaining.slice(p.length);
-      break;
-    }
-  }
-
-  for (const p of PRERELEASE_PREFIXES) {
-    if (remaining.toLowerCase() === p) {
-      prefix = prefix ? `${prefix}${p}` : p;
-      remaining = "";
-      break;
-    }
-    if (remaining.toLowerCase().startsWith(`${p}-`)) {
-      prefix = prefix ? `${prefix}${p}` : p;
-      remaining = remaining.slice(p.length + 1);
-      break;
-    }
-    const lowerRemaining = remaining.toLowerCase();
-    if (lowerRemaining.startsWith(p) && /^\d/.test(remaining.slice(p.length))) {
-      prefix = prefix ? `${prefix}${p}` : p;
-      remaining = remaining.slice(p.length);
-      break;
-    }
-  }
 
   if (remaining.toLowerCase() === "v") {
-    prefix = prefix ? `${prefix}v` : "v";
+    prefix = "v";
     remaining = "";
-  } else if (
-    remaining.toLowerCase().startsWith("v") && /^\d/.test(remaining.slice(1))
-  ) {
-    prefix = prefix ? `${prefix}v` : "v";
+  } else if (remaining.toLowerCase().startsWith("v") && /^\d/.test(remaining.slice(1))) {
+    prefix = "v";
     remaining = remaining.slice(1);
   }
 
-  const version = remaining;
-  const semver = isValidSemver(version);
-  const isFloating = !semver && !hasNumericContent(version);
+  if (!remaining || !/^\d/.test(remaining)) {
+    return {
+      original: tag,
+      prefix: "",
+      version: "",
+      suffix: tag,
+      semver: false,
+      isFloating: true,
+    };
+  }
+
+  const javaMatch = remaining.match(JAVA_STYLE_REGEX);
+  if (javaMatch) {
+    const version = javaMatch[1];
+    const suffix = javaMatch[2] ?? "";
+    return {
+      original: tag,
+      prefix,
+      version,
+      suffix,
+      semver: isValidSemver(version),
+      isFloating: false,
+    };
+  }
+
+  const standardMatch = remaining.match(STANDARD_VERSION_REGEX);
+  if (standardMatch) {
+    const version = standardMatch[1];
+    const suffix = standardMatch[2] ?? "";
+    return {
+      original: tag,
+      prefix,
+      version,
+      suffix,
+      semver: isValidSemver(version),
+      isFloating: false,
+    };
+  }
 
   return {
     original: tag,
-    prefix,
-    version,
-    suffix,
-    semver,
-    isFloating,
+    prefix: "",
+    version: "",
+    suffix: tag,
+    semver: false,
+    isFloating: true,
   };
-}
-
-function hasNumericContent(version: string): boolean {
-  return /\d/.test(version);
 }
 
 function isValidSemver(version: string): boolean {
@@ -157,34 +115,121 @@ function compareVersions(a: ParsedTag, b: ParsedTag): number {
   return 0;
 }
 
-export function groupByVariant(tags: string[]): VariantGroup[] {
-  const parsed = tags.map(parseTag);
-  const groups = new Map<string, ParsedTag[]>();
+function reparseWithDigests(
+  parsed: ParsedTag[],
+  digestMap: Map<string, string>,
+): ParsedTag[] {
+  const result = [...parsed];
+  const digestGroups = new Map<string, ParsedTag[]>();
 
   for (const p of parsed) {
-    const key = p.suffix;
-    if (!groups.has(key)) {
-      groups.set(key, []);
+    const digest = digestMap.get(p.original);
+    if (digest) {
+      if (!digestGroups.has(digest)) {
+        digestGroups.set(digest, []);
+      }
+      digestGroups.get(digest)!.push(p);
     }
-    groups.get(key)!.push(p);
   }
+
+  for (const [, groupTags] of digestGroups) {
+    const referenceTags = groupTags.filter((t) => t.version !== "");
+    const failedTags = groupTags.filter((t) => t.version === "");
+
+    if (referenceTags.length === 0 || failedTags.length === 0) continue;
+
+    for (const failed of failedTags) {
+      for (const ref of referenceTags) {
+        const canonicalForm = ref.suffix
+          ? `${ref.version}-${ref.suffix}`
+          : ref.version;
+
+        if (failed.original.endsWith(canonicalForm)) {
+          const productPrefix = failed.original.slice(
+            0,
+            failed.original.length - canonicalForm.length,
+          );
+
+          const idx = result.findIndex((t) => t.original === failed.original);
+          if (idx !== -1) {
+            result[idx] = {
+              original: failed.original,
+              prefix: productPrefix,
+              version: ref.version,
+              suffix: ref.suffix,
+              semver: ref.semver,
+              isFloating: false,
+            };
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+export function groupByVariant(
+  tags: string[],
+  digestMap?: Map<string, string>,
+): VariantGroup[] {
+  let parsed = tags.map(parseTag);
+
+  if (digestMap) {
+    parsed = reparseWithDigests(parsed, digestMap);
+  }
+
+  const versionedGroups = new Map<string, ParsedTag[]>();
+  for (const p of parsed) {
+    if (!p.isFloating) {
+      const key = p.suffix;
+      if (!versionedGroups.has(key)) {
+        versionedGroups.set(key, []);
+      }
+      versionedGroups.get(key)!.push(p);
+    }
+  }
+
+  const floatingTags = parsed.filter((p) => p.isFloating);
 
   const result: VariantGroup[] = [];
 
-  for (const [suffix, groupTags] of groups) {
-    const versioned = groupTags.filter((t) => !t.isFloating);
-    const floating = groupTags.filter((t) => t.isFloating);
-
-    versioned.sort((a, b) => compareVersions(b, a));
+  for (const [suffix, versioned] of versionedGroups) {
+    versioned.sort((a, b) => {
+      const cmp = compareVersions(b, a);
+      if (cmp !== 0) return cmp;
+      if (a.prefix && !b.prefix) return 1;
+      if (!a.prefix && b.prefix) return -1;
+      return a.original.localeCompare(b.original);
+    });
 
     const latest = versioned.length > 0 ? versioned[0] : null;
     const older = versioned.slice(1);
+
+    const matchingFloating = floatingTags.filter((f) => f.suffix === suffix);
 
     result.push({
       suffix,
       latest,
       older,
-      floating,
+      floating: matchingFloating,
+    });
+  }
+
+  const nonMatchedFloating = floatingTags.filter(
+    (f) => !versionedGroups.has(f.suffix),
+  );
+
+  const defaultVariant = result.find((v) => v.suffix === "");
+  if (defaultVariant) {
+    defaultVariant.floating.push(...nonMatchedFloating);
+  } else if (nonMatchedFloating.length > 0) {
+    result.push({
+      suffix: "",
+      latest: null,
+      older: [],
+      floating: nonMatchedFloating,
     });
   }
 
@@ -207,7 +252,31 @@ export function findMatchingVariant(
     }
   }
 
+  for (const variant of variants) {
+    if (variant.latest?.original === currentTag) {
+      return variant;
+    }
+    if (variant.older.some((t) => t.original === currentTag)) {
+      return variant;
+    }
+    if (variant.floating.some((t) => t.original === currentTag)) {
+      return variant;
+    }
+  }
+
   return null;
+}
+
+function reconstructTag(
+  prefix: string,
+  version: string,
+  suffix: string,
+): string {
+  let result = prefix + version;
+  if (suffix) {
+    result += "-" + suffix;
+  }
+  return result;
 }
 
 export function findBestUpgrade(
@@ -215,18 +284,41 @@ export function findBestUpgrade(
   variants: VariantGroup[],
 ): string | null {
   const variant = findMatchingVariant(currentTag, variants);
-  if (!variant || !variant.latest) return null;
+  if (!variant) return null;
 
-  const current = parseTag(currentTag);
+  let current: ParsedTag | null = null;
+  if (variant.latest?.original === currentTag) {
+    current = variant.latest;
+  } else {
+    current = variant.older.find((t) => t.original === currentTag) ??
+      variant.floating.find((t) => t.original === currentTag) ?? null;
+  }
+
+  if (!current && !variant.latest) return null;
+
+  if (!current) {
+    return variant.latest!.original;
+  }
 
   if (current.isFloating) {
-    return variant.latest.original;
+    if (!variant.latest) return null;
+    return reconstructTag(
+      current.prefix,
+      variant.latest.version,
+      variant.latest.suffix,
+    );
   }
+
+  if (!variant.latest) return null;
 
   const cmp = compareVersions(current, variant.latest);
 
   if (cmp < 0) {
-    return variant.latest.original;
+    return reconstructTag(
+      current.prefix,
+      variant.latest.version,
+      variant.latest.suffix,
+    );
   }
 
   return null;

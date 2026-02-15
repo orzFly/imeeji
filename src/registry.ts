@@ -7,6 +7,16 @@ export interface TagsResponse {
   tags: string[];
 }
 
+export interface DockerHubTag {
+  name: string;
+  digest: string;
+}
+
+export interface DockerHubTagsResponse {
+  results: DockerHubTag[];
+  next?: string;
+}
+
 function getRegistryHost(registry: string): string {
   return REGISTRY_ALIASES[registry] ?? registry;
 }
@@ -116,4 +126,55 @@ export function getRepositoryKey(
   repository: string,
 ): string {
   return `${registry}/${repository}`;
+}
+
+async function fetchDockerHubTagsWithDigests(
+  repository: string,
+): Promise<Map<string, string>> {
+  const digestMap = new Map<string, string>();
+
+  let namespace = "library";
+  let repo = repository;
+
+  if (repository.includes("/")) {
+    const parts = repository.split("/");
+    namespace = parts[0];
+    repo = parts.slice(1).join("/");
+  }
+
+  let url: string | null =
+    `https://hub.docker.com/v2/namespaces/${namespace}/repositories/${repo}/tags?page_size=100`;
+
+  try {
+    while (url) {
+      const response = await fetch(url);
+      if (!response.ok) break;
+
+      const data: DockerHubTagsResponse = await response.json();
+
+      for (const tag of data.results) {
+        digestMap.set(tag.name, tag.digest);
+      }
+
+      url = data.next ?? null;
+    }
+  } catch {
+    // Silently fall back to no digest data
+  }
+
+  return digestMap;
+}
+
+export async function fetchTagsEnriched(
+  registry: string,
+  repository: string,
+): Promise<{ tags: string[]; digestMap?: Map<string, string> }> {
+  const tags = await fetchTags(registry, repository);
+
+  if (registry === "docker.io") {
+    const digestMap = await fetchDockerHubTagsWithDigests(repository);
+    return { tags, digestMap };
+  }
+
+  return { tags };
 }

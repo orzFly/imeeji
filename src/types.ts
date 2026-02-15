@@ -33,3 +33,8 @@ export interface ImageUpdate {
   variants: VariantGroup[];
   currentVariant: VariantGroup | null;
 }
+
+export interface TagFetchResult {
+  tags: string[];
+  digestMap?: Map<string, string>;
+}

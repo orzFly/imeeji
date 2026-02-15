@@ -191,12 +191,6 @@ async function selectTagInVariant(
     options.push(t.original);
   }
 
-  if (variant.floating.length > 0) {
-    for (const t of variant.floating) {
-      options.push(t.original);
-    }
-  }
-
   console.log("Recent versions:");
   for (let i = 0; i < options.length; i++) {
     const marker = options[i] === currentTag ? `${GREEN}*${RESET}` : " ";
