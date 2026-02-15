@@ -74,6 +74,13 @@
           };
         };
 
+        virtualisation.quadlet.containers.jellyfin = {
+          containerConfig = {
+            image = "lscr.io/linuxserver/jellyfin:11.1.4-ls172";
+          };
+        };
+
+
       })
   ];
 }
