@@ -1,4 +1,6 @@
-import { Box, Text, useInput, Key } from "ink";
+import { Box, Text, useInput } from "ink";
+import type { Key } from "ink";
+import { useTerminalHeight } from "./useTerminalHeight.ts";
 
 interface ContextViewerProps {
   filePath: string;
@@ -13,6 +15,9 @@ export function ContextViewer({
   line,
   onClose,
 }: ContextViewerProps) {
+  const rows = useTerminalHeight();
+  const halfWindow = Math.max(1, Math.floor((rows - 4) / 2));
+
   useInput((_input: string, key: Key) => {
     if (key.escape) {
       onClose();
@@ -20,8 +25,8 @@ export function ContextViewer({
   });
 
   const lines = fileContent.split("\n");
-  const startLine = Math.max(1, line - 10);
-  const endLine = Math.min(lines.length, line + 10);
+  const startLine = Math.max(1, line - halfWindow);
+  const endLine = Math.min(lines.length, line + halfWindow);
 
   const contextLines: { num: number; content: string; isTarget: boolean }[] = [];
 
@@ -37,7 +42,7 @@ export function ContextViewer({
   const lineNumWidth = String(maxLineNum).length;
 
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" height={rows} overflow="hidden">
       <Box marginBottom={1}>
         <Text bold>File: {filePath}</Text>
       </Box>

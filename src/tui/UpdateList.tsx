@@ -1,12 +1,16 @@
-import { Box, Text, useInput, Key } from "ink";
+import { Box, Text, useInput } from "ink";
+import type { Key } from "ink";
+import { useState, useEffect } from "react";
 import type { ImageUpdate } from "../types.ts";
-import { useListNav } from "./useListNav.ts";
+import { useTerminalHeight } from "./useTerminalHeight.ts";
+import { formatImageName, truncate } from "./format.ts";
 
 interface UpdateListProps {
   updates: ImageUpdate[];
   selected: Set<number>;
   overrides: Map<number, string>;
   cursor: number;
+  filePath: string;
   onCursorChange: (idx: number) => void;
   onToggle: (idx: number) => void;
   onEdit: (idx: number) => void;
@@ -17,20 +21,12 @@ interface UpdateListProps {
   onQuit: () => void;
 }
 
-function formatImageName(image: { registry: string; repository: string }): string {
-  return `${image.registry}/${image.repository}`;
-}
-
-function truncate(s: string, maxLen: number): string {
-  if (s.length <= maxLen) return s;
-  return s.slice(0, maxLen - 3) + "...";
-}
-
 export function UpdateList({
   updates,
   selected,
   overrides,
   cursor,
+  filePath,
   onCursorChange,
   onToggle,
   onEdit,
@@ -40,6 +36,18 @@ export function UpdateList({
   onConfirm,
   onQuit,
 }: UpdateListProps) {
+  const rows = useTerminalHeight();
+  const viewportItems = Math.max(1, Math.floor((rows - 6) / 3));
+  const [scrollOffset, setScrollOffset] = useState(0);
+
+  useEffect(() => {
+    if (cursor < scrollOffset) {
+      setScrollOffset(cursor);
+    } else if (cursor >= scrollOffset + viewportItems) {
+      setScrollOffset(cursor - viewportItems + 1);
+    }
+  }, [cursor, viewportItems]);
+
   useInput((input: string, key: Key) => {
     if (key.upArrow) {
       onCursorChange(cursor > 0 ? cursor - 1 : updates.length - 1);
@@ -67,17 +75,28 @@ export function UpdateList({
     30,
   );
 
+  const visibleUpdates = updates.slice(scrollOffset, scrollOffset + viewportItems);
+  const aboveCount = scrollOffset;
+  const belowCount = Math.max(0, updates.length - scrollOffset - viewportItems);
+
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" height={rows} overflow="hidden">
       <Box marginBottom={1}>
         <Text bold>imeeji — Interactive Upgrade</Text>
       </Box>
 
-      {updates.map((u, idx) => {
+      {aboveCount > 0 && (
+        <Box>
+          <Text dimColor>↑ {aboveCount} more above</Text>
+        </Box>
+      )}
+
+      {visibleUpdates.map((u, relIdx) => {
+        const idx = scrollOffset + relIdx;
         const isSelected = selected.has(idx);
         const isHighlighted = idx === cursor;
         const displayTag = overrides.get(idx) ?? u.newTag;
-        const location = `${u.image.repository.split("/").pop()}:${u.image.line}`;
+        const location = `${filePath}:${u.image.line}`;
 
         return (
           <Box key={idx} marginBottom={1}>
@@ -94,14 +113,20 @@ export function UpdateList({
                 <Text dimColor> {location}</Text>
               </Box>
               <Box marginLeft={4}>
-                <Text dimColor>{truncate(u.currentTag, 15)}</Text>
+                <Text dimColor>{truncate(u.currentTag, 20)}</Text>
                 <Text dimColor> → </Text>
-                <Text color="green">{truncate(displayTag, 15)}</Text>
+                <Text color="green">{truncate(displayTag, 20)}</Text>
               </Box>
             </Box>
           </Box>
         );
       })}
+
+      {belowCount > 0 && (
+        <Box>
+          <Text dimColor>↓ {belowCount} more below</Text>
+        </Box>
+      )}
 
       <Box marginTop={1} flexDirection="column">
         <Text dimColor>Controls:</Text>

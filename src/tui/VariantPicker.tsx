@@ -1,6 +1,9 @@
-import { Box, Text, useInput, Key } from "ink";
+import { Box, Text, useInput } from "ink";
+import type { Key } from "ink";
 import type { VariantGroup } from "../types.ts";
-import { useListNav } from "./useListNav.ts";
+import { useViewport } from "./useViewport.ts";
+import { useTerminalHeight } from "./useTerminalHeight.ts";
+import { formatVariantLabel } from "./format.ts";
 
 interface VariantPickerProps {
   variants: VariantGroup[];
@@ -9,37 +12,49 @@ interface VariantPickerProps {
   onCancel: () => void;
 }
 
-function formatVariantLabel(variant: VariantGroup): string {
-  if (variant.suffix === "") return "(default)";
-  return variant.suffix;
-}
-
 export function VariantPicker({
   variants,
   currentVariantIdx,
   onSelect,
   onCancel,
 }: VariantPickerProps) {
-  const { cursor } = useListNav(variants.length);
+  const rows = useTerminalHeight();
+  const viewportItems = Math.max(1, Math.floor((rows - 4) / 3));
+  const { cursor, visibleRange, moveUp, moveDown } = useViewport({
+    itemCount: variants.length,
+    viewportHeight: viewportItems,
+  });
 
   useInput((_input: string, key: Key) => {
-    if (key.escape) {
+    if (key.upArrow) {
+      moveUp();
+    } else if (key.downArrow) {
+      moveDown();
+    } else if (key.escape) {
       onCancel();
-      return;
-    }
-    if (key.return) {
+    } else if (key.return) {
       onSelect(cursor);
-      return;
     }
   });
 
+  const visibleVariants = variants.slice(visibleRange.start, visibleRange.end);
+  const aboveCount = visibleRange.start;
+  const belowCount = variants.length - visibleRange.end;
+
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" height={rows} overflow="hidden">
       <Box marginBottom={1}>
         <Text bold>Select Variant:</Text>
       </Box>
 
-      {variants.map((v, idx) => {
+      {aboveCount > 0 && (
+        <Box>
+          <Text dimColor>↑ {aboveCount} more above</Text>
+        </Box>
+      )}
+
+      {visibleVariants.map((v, relIdx) => {
+        const idx = visibleRange.start + relIdx;
         const isHighlighted = idx === cursor;
         const isCurrent = idx === currentVariantIdx;
 
@@ -77,6 +92,12 @@ export function VariantPicker({
           </Box>
         );
       })}
+
+      {belowCount > 0 && (
+        <Box>
+          <Text dimColor>↓ {belowCount} more below</Text>
+        </Box>
+      )}
 
       <Box marginTop={1}>
         <Text dimColor>[Esc] Cancel [Enter] Select Variant</Text>

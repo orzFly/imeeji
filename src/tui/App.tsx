@@ -61,7 +61,7 @@ export function App({ updates, filePath, fileContent, onDone }: AppProps) {
 
   const handleSelectAll = useCallback(() => {
     setSelected(new Set(updates.map((_, i) => i)));
-  }, [updates.length]);
+  }, [updates]);
 
   const handleSelectNone = useCallback(() => {
     setSelected(new Set());
@@ -107,7 +107,7 @@ export function App({ updates, filePath, fileContent, onDone }: AppProps) {
   }
 
   if (view === "context") {
-    const update = updates[cursor];
+    const update = updates[pickerImageIdx];
     return (
       <ContextViewer
         filePath={filePath}
@@ -127,6 +127,7 @@ export function App({ updates, filePath, fileContent, onDone }: AppProps) {
       selected={selected}
       overrides={overrides}
       cursor={cursor}
+      filePath={filePath}
       onCursorChange={setCursor}
       onToggle={handleToggle}
       onEdit={(idx) => {
@@ -137,7 +138,7 @@ export function App({ updates, filePath, fileContent, onDone }: AppProps) {
       }}
       onViewContext={(idx) => {
         setListCursor(cursor);
-        setCursor(idx);
+        setPickerImageIdx(idx);
         setView("context");
       }}
       onSelectAll={handleSelectAll}

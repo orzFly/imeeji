@@ -1,6 +1,9 @@
-import { Box, Text, useInput, Key } from "ink";
-import type { ImageUpdate, VariantGroup } from "../types.ts";
-import { useListNav } from "./useListNav.ts";
+import { Box, Text, useInput } from "ink";
+import type { Key } from "ink";
+import type { ImageUpdate } from "../types.ts";
+import { useViewport } from "./useViewport.ts";
+import { useTerminalHeight } from "./useTerminalHeight.ts";
+import { formatVariantLabel } from "./format.ts";
 
 interface TagPickerProps {
   update: ImageUpdate;
@@ -8,11 +11,6 @@ interface TagPickerProps {
   onSelect: (tag: string) => void;
   onBack: () => void;
   onChangeVariant: () => void;
-}
-
-function formatVariantLabel(variant: VariantGroup): string {
-  if (variant.suffix === "") return "(default)";
-  return variant.suffix;
 }
 
 export function TagPicker({
@@ -33,27 +31,35 @@ export function TagPicker({
     tags.push(t.original);
   }
 
-  const { cursor } = useListNav(tags.length);
+  const rows = useTerminalHeight();
+  const viewportHeight = Math.max(1, rows - 6);
+  const { cursor, visibleRange, moveUp, moveDown } = useViewport({
+    itemCount: tags.length,
+    viewportHeight,
+  });
 
   useInput((_input: string, key: Key) => {
-    if (key.escape) {
+    if (key.upArrow) {
+      moveUp();
+    } else if (key.downArrow) {
+      moveDown();
+    } else if (key.escape) {
       onBack();
-      return;
-    }
-    if (key.return) {
+    } else if (key.return) {
       if (tags[cursor]) {
         onSelect(tags[cursor]);
       }
-      return;
-    }
-    if (key.tab && update.variants.length > 1) {
+    } else if (key.tab && update.variants.length > 1) {
       onChangeVariant();
-      return;
     }
   });
 
+  const visibleTags = tags.slice(visibleRange.start, visibleRange.end);
+  const aboveCount = visibleRange.start;
+  const belowCount = tags.length - visibleRange.end;
+
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" height={rows} overflow="hidden">
       <Box marginBottom={1}>
         <Text bold>Select version for {update.image.registry}/{update.image.repository}</Text>
       </Box>
@@ -61,7 +67,14 @@ export function TagPicker({
         <Text dimColor>Current: {update.currentTag} | Variant: {formatVariantLabel(variant)}</Text>
       </Box>
 
-      {tags.map((tag, idx) => {
+      {aboveCount > 0 && (
+        <Box>
+          <Text dimColor>↑ {aboveCount} more above</Text>
+        </Box>
+      )}
+
+      {visibleTags.map((tag, relIdx) => {
+        const idx = visibleRange.start + relIdx;
         const isHighlighted = idx === cursor;
         const isCurrent = tag === update.currentTag;
 
@@ -81,6 +94,12 @@ export function TagPicker({
           </Box>
         );
       })}
+
+      {belowCount > 0 && (
+        <Box>
+          <Text dimColor>↓ {belowCount} more below</Text>
+        </Box>
+      )}
 
       <Box marginTop={1}>
         <Text dimColor>

@@ -1,5 +1,32 @@
 import type { ImageRef, ImageUpdate } from "./types.ts";
 
+function formatImageName(image: { registry: string; repository: string }): string {
+  return `${image.registry}/${image.repository}`;
+}
+
+function truncate(s: string, maxLen: number): string {
+  if (s.length <= maxLen) return s;
+  return s.slice(0, maxLen - 3) + "...";
+}
+
+function printSummaryTable(updates: ImageUpdate[]): void {
+  const nameWidth = Math.max(
+    ...updates.map((u) => formatImageName(u.image).length),
+    20,
+  );
+
+  console.log("\n\ud83d\udccb Upgrade Summary:\n");
+
+  for (const u of updates) {
+    const name = truncate(formatImageName(u.image), nameWidth).padEnd(nameWidth);
+    const current = truncate(u.currentTag, 20).padEnd(20);
+    const newTag = truncate(u.newTag, 20);
+    console.log(`  ${name}  ${current} \u2192 ${newTag}`);
+  }
+
+  console.log("");
+}
+
 export async function selectUpdates(
   updates: ImageUpdate[],
   autoYes: boolean,
@@ -12,6 +39,7 @@ export async function selectUpdates(
   }
 
   if (autoYes) {
+    printSummaryTable(updates);
     console.log("Auto-accepting all upgrades...");
     return updates.map((u) => {
       const newImage: ImageRef = {
@@ -26,7 +54,7 @@ export async function selectUpdates(
 
   const { render } = await import("ink");
   const { App } = await import("./tui/App.tsx");
-  const { createElement, useState, useReducer } = await import("react");
+  const { createElement } = await import("react");
 
   return new Promise<ImageRef[]>((resolve) => {
     const app = render(
