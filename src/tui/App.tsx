@@ -1,5 +1,4 @@
 import { useState, useCallback } from "react";
-import { useInput, Key } from "ink";
 import type { ImageRef, ImageUpdate } from "../types.ts";
 import { UpdateList } from "./UpdateList.tsx";
 import { TagPicker } from "./TagPicker.tsx";
@@ -48,25 +47,25 @@ export function App({ updates, filePath, fileContent, onDone }: AppProps) {
     onDone([]);
   }, [onDone]);
 
-  useInput((input: string, key: Key) => {
-    if (view === "list") {
-      if (input === " ") {
-        setSelected((prev) => {
-          const newSet = new Set(prev);
-          if (newSet.has(cursor)) {
-            newSet.delete(cursor);
-          } else {
-            newSet.add(cursor);
-          }
-          return newSet;
-        });
-      } else if (input.toLowerCase() === "a") {
-        setSelected(new Set(updates.map((_, i) => i)));
-      } else if (input.toLowerCase() === "n") {
-        setSelected(new Set());
+  const handleToggle = useCallback((idx: number) => {
+    setSelected((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(idx)) {
+        newSet.delete(idx);
+      } else {
+        newSet.add(idx);
       }
-    }
-  });
+      return newSet;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    setSelected(new Set(updates.map((_, i) => i)));
+  }, [updates.length]);
+
+  const handleSelectNone = useCallback(() => {
+    setSelected(new Set());
+  }, []);
 
   if (view === "picker") {
     const update = updates[pickerImageIdx];
@@ -127,8 +126,10 @@ export function App({ updates, filePath, fileContent, onDone }: AppProps) {
       updates={updates}
       selected={selected}
       overrides={overrides}
+      cursor={cursor}
+      onCursorChange={setCursor}
+      onToggle={handleToggle}
       onEdit={(idx) => {
-        setCursor(idx);
         setListCursor(cursor);
         setPickerImageIdx(idx);
         setPickerVariantIdx(findVariantIndex(updates[idx]));
@@ -139,6 +140,8 @@ export function App({ updates, filePath, fileContent, onDone }: AppProps) {
         setCursor(idx);
         setView("context");
       }}
+      onSelectAll={handleSelectAll}
+      onSelectNone={handleSelectNone}
       onConfirm={handleConfirm}
       onQuit={handleQuit}
     />

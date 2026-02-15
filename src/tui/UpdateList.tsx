@@ -6,8 +6,13 @@ interface UpdateListProps {
   updates: ImageUpdate[];
   selected: Set<number>;
   overrides: Map<number, string>;
+  cursor: number;
+  onCursorChange: (idx: number) => void;
+  onToggle: (idx: number) => void;
   onEdit: (idx: number) => void;
   onViewContext: (idx: number) => void;
+  onSelectAll: () => void;
+  onSelectNone: () => void;
   onConfirm: () => void;
   onQuit: () => void;
 }
@@ -25,38 +30,35 @@ export function UpdateList({
   updates,
   selected,
   overrides,
+  cursor,
+  onCursorChange,
+  onToggle,
   onEdit,
   onViewContext,
+  onSelectAll,
+  onSelectNone,
   onConfirm,
   onQuit,
 }: UpdateListProps) {
-  const { cursor } = useListNav(updates.length);
-
   useInput((input: string, key: Key) => {
-    if (input === " ") {
-      return;
-    }
-    if (key.return) {
+    if (key.upArrow) {
+      onCursorChange(cursor > 0 ? cursor - 1 : updates.length - 1);
+    } else if (key.downArrow) {
+      onCursorChange(cursor < updates.length - 1 ? cursor + 1 : 0);
+    } else if (input === " ") {
+      onToggle(cursor);
+    } else if (key.return) {
       onEdit(cursor);
-      return;
-    }
-    if (input.toLowerCase() === "a") {
-      return;
-    }
-    if (input.toLowerCase() === "n") {
-      return;
-    }
-    if (input.toLowerCase() === "v") {
+    } else if (input.toLowerCase() === "a") {
+      onSelectAll();
+    } else if (input.toLowerCase() === "n") {
+      onSelectNone();
+    } else if (input.toLowerCase() === "v") {
       onViewContext(cursor);
-      return;
-    }
-    if (input.toLowerCase() === "c") {
+    } else if (input.toLowerCase() === "c") {
       onConfirm();
-      return;
-    }
-    if (input.toLowerCase() === "q") {
+    } else if (input.toLowerCase() === "q") {
       onQuit();
-      return;
     }
   });
 
@@ -112,33 +114,4 @@ export function UpdateList({
       </Box>
     </Box>
   );
-}
-
-export function useUpdateListSelection(
-  updates: ImageUpdate[],
-  initialSelected?: Set<number>,
-): {
-  selected: Set<number>;
-  toggle: (idx: number) => void;
-  selectAll: () => void;
-  selectNone: () => void;
-} {
-  const initial = initialSelected ?? new Set(updates.map((_, i) => i));
-
-  const handleToggle = (idx: number): Set<number> => {
-    const newSet = new Set(initial);
-    if (newSet.has(idx)) {
-      newSet.delete(idx);
-    } else {
-      newSet.add(idx);
-    }
-    return newSet;
-  };
-
-  return {
-    selected: initial,
-    toggle: handleToggle as (idx: number) => void,
-    selectAll: () => new Set(updates.map((_, i) => i)),
-    selectNone: () => new Set(),
-  };
 }
