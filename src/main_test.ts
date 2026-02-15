@@ -376,7 +376,9 @@ Deno.test("groupByVariant - gradle tags", () => {
   ];
   const variants = groupByVariant(tags);
 
-  const jdk21Al2023 = variants.find((v) => v.suffix === "jdk21-corretto-al2023");
+  const jdk21Al2023 = variants.find((v) =>
+    v.suffix === "jdk21-corretto-al2023"
+  );
   assertEquals(jdk21Al2023?.latest?.original, "9.3.1-jdk21-corretto-al2023");
   assertEquals(jdk21Al2023?.floating.length, 1);
   assertEquals(jdk21Al2023?.floating[0].original, "jdk21-corretto-al2023");
@@ -386,7 +388,9 @@ Deno.test("groupByVariant - gradle tags", () => {
   assertEquals(jdk21?.floating.length, 1);
   assertEquals(jdk21?.floating[0].original, "jdk21-corretto");
 
-  const jdk17Al2023 = variants.find((v) => v.suffix === "jdk17-corretto-al2023");
+  const jdk17Al2023 = variants.find((v) =>
+    v.suffix === "jdk17-corretto-al2023"
+  );
   assertEquals(jdk17Al2023?.latest?.original, "9.3.1-jdk17-corretto-al2023");
   assertEquals(jdk17Al2023?.floating.length, 0);
 

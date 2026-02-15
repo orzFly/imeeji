@@ -2,7 +2,8 @@ import { compare, parse as parseSemver } from "@std/semver";
 import type { ParsedTag, VariantGroup } from "./types.ts";
 
 const JAVA_STYLE_REGEX = /^(\d+u\d+(?:-b\d+)?)(?:-(.+))?$/;
-const STANDARD_VERSION_REGEX = /^(\d+(?:[._]\d+)*(?:-(?:rc|beta|alpha|dev|preview|canary|nightly)\d*)?(?:-\d+)*)(?:-(.+))?$/i;
+const STANDARD_VERSION_REGEX =
+  /^(\d+(?:[._]\d+)*(?:-(?:rc|beta|alpha|dev|preview|canary|nightly)\d*)?(?:-\d+)*)(?:-(.+))?$/i;
 
 export function parseTag(tag: string): ParsedTag {
   let remaining = tag;
@@ -11,7 +12,9 @@ export function parseTag(tag: string): ParsedTag {
   if (remaining.toLowerCase() === "v") {
     prefix = "v";
     remaining = "";
-  } else if (remaining.toLowerCase().startsWith("v") && /^\d/.test(remaining.slice(1))) {
+  } else if (
+    remaining.toLowerCase().startsWith("v") && /^\d/.test(remaining.slice(1))
+  ) {
     prefix = "v";
     remaining = remaining.slice(1);
   }

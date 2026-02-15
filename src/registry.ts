@@ -14,7 +14,6 @@ export interface DockerHubTag {
 
 export interface DockerHubTagsResponse {
   results: DockerHubTag[];
-  next?: string;
 }
 
 function getRegistryHost(registry: string): string {
@@ -142,21 +141,17 @@ async function fetchDockerHubTagsWithDigests(
     repo = parts.slice(1).join("/");
   }
 
-  let url: string | null =
+  const url =
     `https://hub.docker.com/v2/namespaces/${namespace}/repositories/${repo}/tags?page_size=100`;
 
   try {
-    while (url) {
-      const response = await fetch(url);
-      if (!response.ok) break;
+    const response = await fetch(url);
+    if (!response.ok) return digestMap;
 
-      const data: DockerHubTagsResponse = await response.json();
+    const data: DockerHubTagsResponse = await response.json();
 
-      for (const tag of data.results) {
-        digestMap.set(tag.name, tag.digest);
-      }
-
-      url = data.next ?? null;
+    for (const tag of data.results) {
+      digestMap.set(tag.name, tag.digest);
     }
   } catch {
     // Silently fall back to no digest data
