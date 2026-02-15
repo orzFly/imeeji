@@ -18,7 +18,7 @@
   },
   "tasks": {
     "dev": "deno run --watch src/main.ts",
-    "test": "deno test src/"
+    "test": "deno test -P src/"
   },
   "compilerOptions": {
     "jsx": "react-jsx",
