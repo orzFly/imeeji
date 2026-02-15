@@ -76,7 +76,7 @@ async function fetchOciTags(
   const allTags: string[] = [];
   let token: string | undefined;
 
-  let url: string | null = `https://${host}/v2/${repository}/tags/list?n=100`;
+  let url: string | null = `https://${host}/v2/${repository}/tags/list`;
   const seenUrls = new Set<string>();
 
   while (url && !seenUrls.has(url)) {
