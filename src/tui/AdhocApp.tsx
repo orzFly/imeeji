@@ -1,19 +1,11 @@
 import { useCallback, useState } from "react";
-import type { ImageUpdate, VariantGroup } from "../types.ts";
+import type { ImageUpdate } from "../types.ts";
 import type { ParsedImageRef } from "../adhoc.ts";
+import { findVariantIndex } from "../analyzer.ts";
 import { TagPicker } from "./TagPicker.tsx";
 import { VariantPicker } from "./VariantPicker.tsx";
 
 type View = "variant" | "tag";
-
-function findVariantIndex(update: ImageUpdate): number {
-  if (!update.currentVariant) return 0;
-  return update.variants.findIndex(
-    (v: VariantGroup) =>
-      v.prefix === update.currentVariant!.prefix &&
-      v.suffix === update.currentVariant!.suffix,
-  );
-}
 
 interface AdhocAppProps {
   update: ImageUpdate;

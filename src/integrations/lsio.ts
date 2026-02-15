@@ -26,6 +26,16 @@ export interface LsioImageMetadata {
   tags: LsioTag[];
 }
 
+export function getLsioRepoInfo(
+  repository: string,
+  metadata: Map<string, LsioImageMetadata> | null,
+): { meta: LsioImageMetadata; floatingTags: Set<string> } | null {
+  const repoKey = `linuxserver/${repository.replace("linuxserver/", "")}`;
+  const meta = metadata?.get(repoKey);
+  if (!meta) return null;
+  return { meta, floatingTags: getLsioFloatingTags(meta) };
+}
+
 const LSIO_API_URL = "https://api.linuxserver.io/api/v1/images";
 
 export async function fetchLsioMetadata(): Promise<

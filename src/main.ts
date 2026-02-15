@@ -14,7 +14,7 @@ import type { ImageUpdate, TagFetchResult } from "./types.ts";
 import { mapPool } from "./pool.ts";
 import {
   fetchLsioMetadata,
-  getLsioFloatingTags,
+  getLsioRepoInfo,
   isLinuxServerRepo,
 } from "./integrations/lsio.ts";
 import { parseImageRef, runAdhocMode } from "./adhoc.ts";
@@ -216,11 +216,9 @@ async function main(): Promise<void> {
         continue;
       }
 
-      const repoKey = `linuxserver/${
-        image.repository.replace("linuxserver/", "")
-      }`;
-      const lsioMeta = lsioMetadata?.get(repoKey);
-      const floatingTags = lsioMeta ? getLsioFloatingTags(lsioMeta) : undefined;
+      const lsioInfo = getLsioRepoInfo(image.repository, lsioMetadata);
+      const lsioMeta = lsioInfo?.meta;
+      const floatingTags = lsioInfo?.floatingTags;
 
       const variants = groupByVariant(tags, result?.digestMap, floatingTags);
       const newTag = findBestUpgrade(image.tag, variants);

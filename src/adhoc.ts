@@ -8,7 +8,7 @@ import type {
 } from "./types.ts";
 import {
   fetchLsioMetadata,
-  getLsioFloatingTags,
+  getLsioRepoInfo,
   isLinuxServerRepo,
 } from "./integrations/lsio.ts";
 
@@ -122,11 +122,9 @@ export async function fetchImageVariants(
     lsioMetadata = await fetchLsioMetadata();
   }
 
-  const repoKey = `linuxserver/${
-    parsed.repository.replace("linuxserver/", "")
-  }`;
-  const lsioMeta = lsioMetadata?.get(repoKey);
-  const floatingTags = lsioMeta ? getLsioFloatingTags(lsioMeta) : undefined;
+  const lsioInfo = getLsioRepoInfo(parsed.repository, lsioMetadata);
+  const lsioMeta = lsioInfo?.meta;
+  const floatingTags = lsioInfo?.floatingTags;
 
   const variants = groupByVariant(result.tags, result.digestMap, floatingTags);
 

@@ -1,5 +1,5 @@
 import { compare, parse as parseSemver } from "@std/semver";
-import type { ParsedTag, VariantGroup } from "./types.ts";
+import type { ImageUpdate, ParsedTag, VariantGroup } from "./types.ts";
 
 const JAVA_STYLE_REGEX = /^(\d+u\d+(?:-b\d+)?)(?:-(.+))?$/;
 const STANDARD_VERSION_REGEX =
@@ -416,4 +416,13 @@ export function findBestUpgrade(
   }
 
   return null;
+}
+
+export function findVariantIndex(update: ImageUpdate): number {
+  if (!update.currentVariant) return 0;
+  return update.variants.findIndex(
+    (v) =>
+      v.prefix === update.currentVariant!.prefix &&
+      v.suffix === update.currentVariant!.suffix,
+  );
 }

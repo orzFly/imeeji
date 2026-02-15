@@ -1,20 +1,12 @@
 import { useCallback, useState } from "react";
 import type { ImageRef, ImageUpdate } from "../types.ts";
+import { findVariantIndex } from "../analyzer.ts";
 import { UpdateList } from "./UpdateList.tsx";
 import { TagPicker } from "./TagPicker.tsx";
 import { VariantPicker } from "./VariantPicker.tsx";
 import { ContextViewer } from "./ContextViewer.tsx";
 
 type View = "list" | "picker" | "context" | "variants";
-
-function findVariantIndex(update: ImageUpdate): number {
-  if (!update.currentVariant) return 0;
-  return update.variants.findIndex(
-    (v) =>
-      v.prefix === update.currentVariant!.prefix &&
-      v.suffix === update.currentVariant!.suffix,
-  );
-}
 
 interface AppProps {
   updates: ImageUpdate[];

@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { parseWwwAuthenticate } from "./registry.ts";
+import { parseWwwAuthenticate } from "./integrations/ociRegistry.ts";
 
 Deno.test("parseWwwAuthenticate - parses standard Bearer challenge", () => {
   const header =
