@@ -124,18 +124,3 @@ export function findImages(
 
   return images;
 }
-
-export function applyUpdates(content: string, updates: ImageRef[]): string {
-  const sorted = [...updates].sort((a, b) => b.startIndex - a.startIndex);
-
-  let result = content;
-  for (const update of sorted) {
-    const replacement = update.escaper
-      ? update.escaper(update.tag)
-      : `${update.registry}/${update.repository}:${update.tag}`;
-    result = result.slice(0, update.startIndex) +
-      replacement +
-      result.slice(update.startIndex + update.matchedLength);
-  }
-  return result;
-}
