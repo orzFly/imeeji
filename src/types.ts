@@ -9,7 +9,10 @@ export interface ImageRef {
   column: number;
   startIndex: number;
   endIndex: number;
+  matchedLength: number;
   originalFull?: string;
+  hasExplicitTag?: boolean;
+  escaper?: (tag: string) => string;
   filePath: string;
 }
 

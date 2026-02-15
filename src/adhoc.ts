@@ -149,7 +149,8 @@ export function createImageUpdate(
     line: 0,
     column: 0,
     startIndex: 0,
-    endIndex: 0,
+    endIndex: parsed.full.length,
+    matchedLength: parsed.full.length,
     filePath: "",
   };
 

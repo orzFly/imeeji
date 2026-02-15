@@ -1,5 +1,12 @@
 import type { ImageRef } from "./types.ts";
 
+function buildReplacement(update: ImageRef): string {
+  if (update.escaper) {
+    return update.escaper(update.tag);
+  }
+  return `${update.registry}/${update.repository}:${update.tag}`;
+}
+
 export interface DiffHunk {
   oldStart: number;
   oldLines: number;
@@ -35,8 +42,7 @@ export function generateDiff(
 
     if (update) {
       const originalFull = update.originalFull ?? update.full;
-      const newImageRef =
-        `${update.registry}/${update.repository}:${update.tag}`;
+      const newImageRef = buildReplacement(update);
       newLines.push(line.replace(originalFull, newImageRef));
     } else {
       newLines.push(line);
@@ -114,8 +120,7 @@ export function applyUpdates(
 
     if (update) {
       const originalFull = update.originalFull ?? update.full;
-      const newImageRef =
-        `${update.registry}/${update.repository}:${update.tag}`;
+      const newImageRef = buildReplacement(update);
       return line.replace(originalFull, newImageRef);
     }
 

@@ -1,40 +1,125 @@
 import type { ImageRef } from "./types.ts";
 
-const IMAGE_PATTERN =
+const FULL_PATTERN =
   /(?<registry>[a-z0-9][a-z0-9.-]*\.[a-z]{2,})\/(?<repo>[a-z0-9_.-]+(?:\/[a-z0-9_.-]+)*):(?<tag>[a-zA-Z0-9._-]+)/gi;
 
-export function findImages(content: string, filePath: string): ImageRef[] {
+const SHORTHAND_PATTERN =
+  /(?:^|\s)image:\s+(?<quote>["'])?(?<imageMatch>(?<repo>[a-z0-9_.-]+(?:\/[a-z0-9_.-]+)?)(?::(?<tag>[a-zA-Z0-9._-]+))?)(\k<quote>)?/i;
+
+function isCommentLine(line: string): boolean {
+  const trimmed = line.trim();
+  return trimmed.startsWith("#") ||
+    trimmed.startsWith(";") ||
+    trimmed.startsWith("//");
+}
+
+function normalizeShorthandRepo(repo: string): {
+  registry: string;
+  repository: string;
+} {
+  if (repo.includes("/")) {
+    return { registry: "docker.io", repository: repo };
+  }
+  return { registry: "docker.io", repository: `library/${repo}` };
+}
+
+export function findImages(
+  content: string,
+  filePath: string,
+  allowComments = false,
+): ImageRef[] {
   const images: ImageRef[] = [];
+  const lines = content.split("\n");
 
-  for (const match of content.matchAll(IMAGE_PATTERN)) {
-    const fullMatch = match[0];
-    const registry = match.groups?.registry ?? "";
-    const repository = match.groups?.repo ?? "";
-    const tag = match.groups?.tag ?? "";
+  let lineOffset = 0;
 
-    const startIndex = match.index ?? 0;
+  for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+    const line = lines[lineIdx];
+    const lineNum = lineIdx + 1;
 
-    let lineNum = 1;
-    let lineStart = 0;
-    for (let i = 0; i < startIndex; i++) {
-      if (content[i] === "\n") {
-        lineNum++;
-        lineStart = i + 1;
+    if (!allowComments && isCommentLine(line)) {
+      lineOffset += line.length + 1;
+      continue;
+    }
+
+    FULL_PATTERN.lastIndex = 0;
+    const fullMatch = FULL_PATTERN.exec(line);
+
+    if (fullMatch) {
+      const registry = fullMatch.groups?.registry ?? "";
+      const repository = fullMatch.groups?.repo ?? "";
+      const tag = fullMatch.groups?.tag ?? "";
+      const fullText = fullMatch[0];
+      const matchStartInLine = fullMatch.index ?? 0;
+
+      const startIndex = lineOffset + matchStartInLine;
+      const endIndex = startIndex + fullText.length;
+      const column = matchStartInLine + 1;
+
+      images.push({
+        full: fullText,
+        registry,
+        repository,
+        tag,
+        line: lineNum,
+        column,
+        startIndex,
+        endIndex,
+        matchedLength: fullText.length,
+        escaper: (t) => `${registry}/${repository}:${t}`,
+        filePath,
+      });
+    } else {
+      const shorthandMatch = SHORTHAND_PATTERN.exec(line);
+
+      if (shorthandMatch) {
+        const quote = shorthandMatch.groups?.quote ?? "";
+        const imageMatch = shorthandMatch.groups?.imageMatch ?? "";
+        const originalRepo = shorthandMatch.groups?.repo ?? "";
+        const capturedTag = shorthandMatch.groups?.tag;
+        const hasExplicitTag = capturedTag !== undefined;
+        const tag = capturedTag ?? "latest";
+
+        const { registry, repository } = normalizeShorthandRepo(originalRepo);
+
+        const matchStartInLine = shorthandMatch.index ?? 0;
+        const imageMatchStart = shorthandMatch[0].indexOf(imageMatch);
+
+        let startIndex: number;
+        let matchedLength: number;
+        let full: string;
+
+        if (quote) {
+          startIndex = lineOffset + matchStartInLine + imageMatchStart - 1;
+          matchedLength = imageMatch.length + 2;
+          full = `${quote}${imageMatch}${quote}`;
+        } else {
+          startIndex = lineOffset + matchStartInLine + imageMatchStart;
+          matchedLength = imageMatch.length;
+          full = imageMatch;
+        }
+
+        const endIndex = startIndex + matchedLength;
+        const column = (startIndex - lineOffset) + 1;
+
+        images.push({
+          full,
+          registry,
+          repository,
+          tag,
+          line: lineNum,
+          column,
+          startIndex,
+          endIndex,
+          matchedLength,
+          hasExplicitTag,
+          escaper: (t) => `${quote}${originalRepo}:${t}${quote}`,
+          filePath,
+        });
       }
     }
-    const column = startIndex - lineStart + 1;
 
-    images.push({
-      full: fullMatch,
-      registry,
-      repository,
-      tag,
-      line: lineNum,
-      column,
-      startIndex,
-      endIndex: startIndex + fullMatch.length,
-      filePath,
-    });
+    lineOffset += line.length + 1;
   }
 
   return images;
@@ -45,9 +130,12 @@ export function applyUpdates(content: string, updates: ImageRef[]): string {
 
   let result = content;
   for (const update of sorted) {
+    const replacement = update.escaper
+      ? update.escaper(update.tag)
+      : `${update.registry}/${update.repository}:${update.tag}`;
     result = result.slice(0, update.startIndex) +
-      update.full +
-      result.slice(update.endIndex);
+      replacement +
+      result.slice(update.startIndex + update.matchedLength);
   }
   return result;
 }

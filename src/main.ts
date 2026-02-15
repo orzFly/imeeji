@@ -34,6 +34,7 @@ USAGE:
 OPTIONS:
   -n, --dry-run          Print diff without modifying files
   -y, --yes              Auto-accept latest versions (non-interactive)
+  --allow-comments       Parse images inside comment lines
   --include <PATTERN>    Include glob pattern (repeatable, adds to defaults)
   --exclude <PATTERN>    Exclude glob pattern (repeatable)
   --exclude-default      Disable default include patterns
@@ -67,6 +68,7 @@ async function main(): Promise<void> {
       "version",
       "exclude-default",
       "include-ignored",
+      "allow-comments",
     ],
     string: ["include", "exclude"],
     alias: {
@@ -99,6 +101,7 @@ async function main(): Promise<void> {
 
   const dryRun = parsed["dry-run"] ?? false;
   const autoYes = parsed.yes ?? false;
+  const allowComments = parsed["allow-comments"] ?? false;
   const includePatterns = parsed.include as string[] | undefined;
   const excludePatterns = parsed.exclude as string[] | undefined;
   const excludeDefault = parsed["exclude-default"] ?? false;
@@ -132,7 +135,7 @@ async function main(): Promise<void> {
   let totalImages = 0;
 
   for (const file of scannedFiles) {
-    const images = findImages(file.content, file.path);
+    const images = findImages(file.content, file.path, allowComments);
     if (images.length > 0) {
       allImages.push({ ...file, images });
       totalImages += images.length;
