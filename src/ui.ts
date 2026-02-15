@@ -56,6 +56,27 @@ export async function selectUpdates(
   const { App } = await import("./tui/App.tsx");
   const { createElement } = await import("react");
 
+  const ENTER_ALT = "\x1b[?1049h";
+  const EXIT_ALT = "\x1b[?1049l";
+  const encoder = new TextEncoder();
+
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    Deno.stdout.writeSync(encoder.encode(EXIT_ALT));
+  };
+
+  const sigintHandler = () => {
+    cleanup();
+    Deno.exit(130);
+  };
+
+  Deno.addSignalListener("SIGINT", sigintHandler);
+  globalThis.addEventListener("unload", cleanup);
+
+  Deno.stdout.writeSync(encoder.encode(ENTER_ALT));
+
   return new Promise<ImageRef[]>((resolve) => {
     const app = render(
       createElement(App, {
@@ -64,9 +85,12 @@ export async function selectUpdates(
         fileContent,
         onDone: (results: ImageRef[]) => {
           app.unmount();
+          cleanup();
+          Deno.removeSignalListener("SIGINT", sigintHandler);
           resolve(results);
         },
       }),
+      { exitOnCtrlC: false },
     );
   });
 }
