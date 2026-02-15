@@ -124,53 +124,23 @@ function compareVersions(a: ParsedTag, b: ParsedTag): number {
     }
   }
 
-  const numA = parseFloat(a.version);
-  const numB = parseFloat(b.version);
-
-  if (!isNaN(numA) && !isNaN(numB)) {
-    if (numA !== numB) return numA - numB;
-  }
-
-  const partsA = a.version.split(".");
-  const partsB = b.version.split(".");
-  const maxLen = Math.max(partsA.length, partsB.length);
-
-  for (let i = 0; i < maxLen; i++) {
-    const partA = partsA[i] ?? "0";
-    const partB = partsB[i] ?? "0";
-
-    const numPartA = parseInt(partA, 10);
-    const numPartB = parseInt(partB, 10);
-
-    if (!isNaN(numPartA) && !isNaN(numPartB)) {
-      if (numPartA !== numPartB) return numPartA - numPartB;
-    } else {
-      const cmp = partA.localeCompare(partB);
-      if (cmp !== 0) return cmp;
-    }
-  }
-
-  const preReleaseRegex = /-(?:rc|beta|alpha|dev|preview|canary|nightly|m)(\d*)/i;
+  const preReleaseRegex = /-(?:rc|beta|alpha|dev|preview|canary|nightly|m)(\d*)$/i;
   const preA = a.version.match(preReleaseRegex);
   const preB = b.version.match(preReleaseRegex);
+  const baseA = preA ? a.version.slice(0, preA.index) : a.version;
+  const baseB = preB ? b.version.slice(0, preB.index) : b.version;
 
-  if (preA && !preB) return -1;
+  const padVersion = (v: string) => v.replace(/\d+/g, (x) => x.padStart(30, "0"));
+  const paddedA = padVersion(baseA);
+  const paddedB = padVersion(baseB);
+  const cmp = paddedA.localeCompare(paddedB);
+  if (cmp !== 0) return cmp;
+
   if (!preA && preB) return 1;
+  if (preA && !preB) return -1;
   if (preA && preB) {
-    const numA = preA[1] ? parseInt(preA[1], 10) : 0;
-    const numB = preB[1] ? parseInt(preB[1], 10) : 0;
-    if (numA !== numB) return numA - numB;
+    return preA[0].localeCompare(preB[0]);
   }
-
-  const buildRegex = /-([a-z]{1,2})(\d+)$/i;
-  const buildA = a.version.match(buildRegex);
-  const buildB = b.version.match(buildRegex);
-  if (buildA && buildB && buildA[1].toLowerCase() === buildB[1].toLowerCase()) {
-    const numA = parseInt(buildA[2], 10);
-    const numB = parseInt(buildB[2], 10);
-    if (numA !== numB) return numA - numB;
-  }
-
   return 0;
 }
 

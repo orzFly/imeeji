@@ -820,3 +820,22 @@ Deno.test("groupByVariant - non-lsio v4 versioned", () => {
   assertEquals(vVariant?.floating.length, 0);
 });
 
+Deno.test("groupByVariant - nginx 1.9 vs 1.29 ordering", () => {
+  const tags = [
+    "1.9-alpine",
+    "1.8-alpine",
+    "1.29.5-alpine",
+    "1.29.4-alpine",
+    "1.29-alpine",
+    "1.28-alpine",
+    "1.27-alpine",
+  ];
+  const variants = groupByVariant(tags);
+  const alpineVariant = variants.find((v) => v.suffix === "alpine");
+  assertEquals(alpineVariant?.latest?.original, "1.29.5-alpine");
+  const olderTags = alpineVariant?.older.map((t) => t.original) ?? [];
+  assertEquals(olderTags.indexOf("1.29.4-alpine") < olderTags.indexOf("1.29-alpine"), true);
+  assertEquals(olderTags.indexOf("1.29-alpine") < olderTags.indexOf("1.28-alpine"), true);
+  assertEquals(olderTags.indexOf("1.9-alpine") < olderTags.indexOf("1.8-alpine"), true);
+});
+
