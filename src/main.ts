@@ -131,7 +131,7 @@ async function main(): Promise<void> {
     if (result.foundCurrentTag === false) {
       const image = uniqueEntries.find(([k]) => k === key)?.[1];
       if (image) {
-        warnings.push(`WARNING: Current tag '${image.tag}' for ${key} not found in recent 1000 tags - may be very old`);
+        warnings.push(`WARNING: Current tag '${image.tag}' for ${key} not found in recent ${result.tags.length} tags - may be very old`);
       }
     }
   }
