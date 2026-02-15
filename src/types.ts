@@ -18,16 +18,14 @@ export interface ImageRef {
 
 export interface ParsedTag {
   original: string;
-  prefix: string;
-  version: string;
-  suffix: string;
+  version: string[];
+  variantKey: string;
   semver: boolean;
   isFloating: boolean;
 }
 
 export interface VariantGroup {
-  prefix: string;
-  suffix: string;
+  variantKey: string;
   latest: ParsedTag | null;
   older: ParsedTag[];
   floating: ParsedTag[];

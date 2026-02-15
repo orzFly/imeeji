@@ -1,10 +1,8 @@
 import type { VariantGroup } from "../types.ts";
 
 export function formatVariantLabel(variant: VariantGroup): string {
-  if (variant.prefix === "" && variant.suffix === "") return "(default)";
-  if (variant.prefix === "") return variant.suffix;
-  if (variant.suffix === "") return variant.prefix;
-  return `${variant.prefix} ${variant.suffix}`;
+  if (variant.variantKey === "*") return "(default)";
+  return variant.variantKey.replace(/\*/g, "").replace(/^-|-$/g, "");
 }
 
 export function formatImageName(

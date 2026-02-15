@@ -65,9 +65,7 @@ export function parseImageRef(input: string): ParsedImageRef {
 function findDefaultVariant(variants: VariantGroup[]): number {
   for (let i = 0; i < variants.length; i++) {
     const v = variants[i];
-    if (
-      v.prefix === "" && v.suffix === "" && v.latest && !v.latest.isFloating
-    ) {
+    if (v.variantKey === "*" && v.latest && !v.latest.isFloating) {
       return i;
     }
   }
@@ -79,7 +77,8 @@ function findDefaultVariant(variants: VariantGroup[]): number {
     const v = variants[i];
     if (!v.latest) continue;
 
-    const score = v.prefix.length + v.suffix.length;
+    const starCount = (v.variantKey.match(/\*/g) || []).length;
+    const score = v.variantKey.length - starCount;
     if (score < bestScore) {
       bestScore = score;
       bestIdx = i;
@@ -97,10 +96,10 @@ function findVariantWithTag(tag: string, variants: VariantGroup[]): number {
     if (v.floating.some((t) => t.original === tag)) return i;
   }
 
-  const parsed = tag;
   for (let i = 0; i < variants.length; i++) {
     const v = variants[i];
-    if (v.suffix && parsed.endsWith(v.suffix)) return i;
+    const afterStar = v.variantKey.split("*").pop() ?? "";
+    if (afterStar && tag.endsWith(afterStar)) return i;
   }
 
   return -1;

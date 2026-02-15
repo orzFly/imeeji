@@ -3,10 +3,40 @@ import type { ImageUpdate, ParsedTag, VariantGroup } from "./types.ts";
 
 const JAVA_STYLE_REGEX = /^(\d+u\d+(?:-b\d+)?)(?:-(.+))?$/;
 const STANDARD_VERSION_REGEX =
-  /^(\d+(?:[._]\d+)*(?:-(?:(?:rc|beta|alpha|dev|preview|canary|nightly)\d*|m\d+))?(?:-\d+)*(?:-[a-z][0-9a-f]+)?(?:-[a-z]{1,2}\d+)?)(?:-(.+))?$/i;
+  /^(\d+(?:[._]\d+)*(?:-(?:(?:rc|beta|alpha|dev|preview|canary|nightly|unstable)\d*(?:\.\d+)?|m\d+))?(?:-\d+)*(?:-[a-z][0-9a-f]+)?(?:-[a-z]{1,2}\d+)?)(?:-(.+))?$/i;
 const ARCH_PREFIX_REGEX =
   /^(amd64|arm64v8|arm32v[567]|i386|s390x|ppc64le|riscv64|mips64le)-/i;
 const GIT_HASH_BUILD_REGEX = /^([0-9a-f]{7,8})-([a-z]{1,2})(\d+)$/i;
+const EDITION_BUILD_REGEX = /^(\d+(?:\.\d+)*)-(([a-zA-Z]{2,4})\.(\d+))$/;
+const PRE_RELEASE_KEYWORDS =
+  /^(?:rc|beta|alpha|dev|preview|canary|nightly|unstable)$/i;
+
+function buildResult(
+  original: string,
+  prefix: string,
+  versionStr: string,
+  suffix: string,
+  semver: boolean,
+  isFloating: boolean,
+): ParsedTag {
+  if (isFloating) {
+    return {
+      original,
+      version: [],
+      variantKey: prefix + suffix,
+      semver: false,
+      isFloating: true,
+    };
+  }
+  const variantKey = prefix + "*" + (suffix ? "-" + suffix : "");
+  return {
+    original,
+    version: [versionStr],
+    variantKey,
+    semver,
+    isFloating: false,
+  };
+}
 
 export function parseTag(tag: string): ParsedTag {
   let remaining = tag;
@@ -36,63 +66,59 @@ export function parseTag(tag: string): ParsedTag {
 
   const hashBuildMatch = remaining.match(GIT_HASH_BUILD_REGEX);
   if (hashBuildMatch) {
-    return {
-      original: tag,
-      prefix,
-      version: remaining,
-      suffix: "",
-      semver: false,
-      isFloating: false,
-    };
+    return buildResult(tag, prefix, remaining, "", false, false);
   }
 
   if (!remaining || !/^\d/.test(remaining)) {
-    return {
-      original: tag,
-      prefix,
-      version: "",
-      suffix: remaining,
-      semver: false,
-      isFloating: true,
-    };
+    return buildResult(tag, prefix, "", remaining, false, true);
   }
 
   const javaMatch = remaining.match(JAVA_STYLE_REGEX);
   if (javaMatch) {
     const version = javaMatch[1];
     const suffix = javaMatch[2] ?? "";
-    return {
-      original: tag,
+    return buildResult(
+      tag,
       prefix,
       version,
       suffix,
-      semver: isValidSemver(version),
-      isFloating: false,
-    };
+      isValidSemver(version),
+      false,
+    );
+  }
+
+  const editionMatch = remaining.match(EDITION_BUILD_REGEX);
+  if (editionMatch) {
+    const baseVersion = editionMatch[1];
+    const edition = editionMatch[3];
+    const buildCounter = editionMatch[4];
+    if (!PRE_RELEASE_KEYWORDS.test(edition)) {
+      const variantKey = prefix + "*-" + edition + ".*";
+      return {
+        original: tag,
+        version: [baseVersion, buildCounter],
+        variantKey,
+        semver: isValidSemver(baseVersion),
+        isFloating: false,
+      };
+    }
   }
 
   const standardMatch = remaining.match(STANDARD_VERSION_REGEX);
   if (standardMatch) {
     const version = standardMatch[1];
     const suffix = standardMatch[2] ?? "";
-    return {
-      original: tag,
+    return buildResult(
+      tag,
       prefix,
       version,
       suffix,
-      semver: isValidSemver(version),
-      isFloating: false,
-    };
+      isValidSemver(version),
+      false,
+    );
   }
 
-  return {
-    original: tag,
-    prefix,
-    version: "",
-    suffix: remaining,
-    semver: false,
-    isFloating: true,
-  };
+  return buildResult(tag, prefix, "", remaining, false, true);
 }
 
 function isValidSemver(version: string): boolean {
@@ -106,8 +132,11 @@ function isValidSemver(version: string): boolean {
 }
 
 function compareVersions(a: ParsedTag, b: ParsedTag): number {
-  const hashA = a.version.match(GIT_HASH_BUILD_REGEX);
-  const hashB = b.version.match(GIT_HASH_BUILD_REGEX);
+  const vA = a.version[0] ?? "";
+  const vB = b.version[0] ?? "";
+
+  const hashA = vA.match(GIT_HASH_BUILD_REGEX);
+  const hashB = vB.match(GIT_HASH_BUILD_REGEX);
   if (hashA && hashB) {
     if (hashA[2].toLowerCase() === hashB[2].toLowerCase()) {
       return parseInt(hashA[3], 10) - parseInt(hashB[3], 10);
@@ -118,20 +147,21 @@ function compareVersions(a: ParsedTag, b: ParsedTag): number {
 
   if (a.semver && b.semver) {
     try {
-      const semverA = parseSemver(a.version);
-      const semverB = parseSemver(b.version);
-      return compare(semverA, semverB);
+      const semverA = parseSemver(vA);
+      const semverB = parseSemver(vB);
+      const semverCmp = compare(semverA, semverB);
+      if (semverCmp !== 0) return semverCmp;
     } catch {
       // fall through to numeric/string comparison
     }
   }
 
   const preReleaseRegex =
-    /-(?:rc|beta|alpha|dev|preview|canary|nightly|m)(\d*)$/i;
-  const preA = a.version.match(preReleaseRegex);
-  const preB = b.version.match(preReleaseRegex);
-  const baseA = preA ? a.version.slice(0, preA.index) : a.version;
-  const baseB = preB ? b.version.slice(0, preB.index) : b.version;
+    /-(?:rc|beta|alpha|dev|preview|canary|nightly|unstable|m)(\d*(?:\.\d+)?)$/i;
+  const preA = vA.match(preReleaseRegex);
+  const preB = vB.match(preReleaseRegex);
+  const baseA = preA ? vA.slice(0, preA.index) : vA;
+  const baseB = preB ? vB.slice(0, preB.index) : vB;
 
   const padVersion = (v: string) =>
     v.replace(/\d+/g, (x) => x.padStart(30, "0"));
@@ -145,6 +175,15 @@ function compareVersions(a: ParsedTag, b: ParsedTag): number {
   if (preA && preB) {
     return preA[0].localeCompare(preB[0]);
   }
+
+  if (a.version.length > 1 && b.version.length > 1) {
+    const buildA = parseInt(a.version[1], 10);
+    const buildB = parseInt(b.version[1], 10);
+    if (!isNaN(buildA) && !isNaN(buildB)) {
+      return buildA - buildB;
+    }
+  }
+
   return 0;
 }
 
@@ -166,30 +205,39 @@ function reparseWithDigests(
   }
 
   for (const [, groupTags] of digestGroups) {
-    const referenceTags = groupTags.filter((t) => t.version !== "");
-    const failedTags = groupTags.filter((t) => t.version === "");
+    const referenceTags = groupTags.filter((t) => t.version.length > 0);
+    const failedTags = groupTags.filter((t) => t.version.length === 0);
 
     if (referenceTags.length === 0 || failedTags.length === 0) continue;
 
     for (const failed of failedTags) {
       for (const ref of referenceTags) {
-        const canonicalForm = ref.suffix
-          ? `${ref.version}-${ref.suffix}`
-          : ref.version;
+        const suffixPart = ref.variantKey.includes("*")
+          ? ref.variantKey.slice(ref.variantKey.indexOf("*") + 1)
+          : "";
+        let reconstructedSuffix = suffixPart;
+        let vi = 1;
+        while (reconstructedSuffix.includes("*") && vi < ref.version.length) {
+          reconstructedSuffix = reconstructedSuffix.replace(
+            "*",
+            ref.version[vi],
+          );
+          vi++;
+        }
+        const canon = ref.version[0] + reconstructedSuffix;
 
-        if (failed.original.endsWith(canonicalForm)) {
+        if (failed.original.endsWith(canon)) {
           const productPrefix = failed.original.slice(
             0,
-            failed.original.length - canonicalForm.length,
+            failed.original.length - canon.length,
           );
 
           const idx = result.findIndex((t) => t.original === failed.original);
           if (idx !== -1) {
             result[idx] = {
               original: failed.original,
-              prefix: productPrefix,
               version: ref.version,
-              suffix: ref.suffix,
+              variantKey: productPrefix + ref.variantKey,
               semver: ref.semver,
               isFloating: false,
             };
@@ -206,8 +254,11 @@ function reparseWithDigests(
 function reparseWithSuffixInference(parsed: ParsedTag[]): ParsedTag[] {
   const knownSuffixes = new Set<string>();
   for (const p of parsed) {
-    if (!p.isFloating && p.suffix) {
-      knownSuffixes.add(p.suffix);
+    if (!p.isFloating && p.variantKey.includes("*")) {
+      const afterStar = p.variantKey.split("*").pop() ?? "";
+      if (afterStar.startsWith("-")) {
+        knownSuffixes.add(afterStar.slice(1));
+      }
     }
   }
 
@@ -224,11 +275,15 @@ function reparseWithSuffixInference(parsed: ParsedTag[]): ParsedTag[] {
       const reparsed = parseTag(remainder);
       if (reparsed.isFloating) continue;
 
+      const newPrefix = suffix + "-" +
+        reparsed.variantKey.slice(0, reparsed.variantKey.indexOf("*"));
+      const afterStar = reparsed.variantKey.slice(
+        reparsed.variantKey.indexOf("*") + 1,
+      );
       result[i] = {
         original: p.original,
-        prefix: suffix + "-" + reparsed.prefix,
         version: reparsed.version,
-        suffix: reparsed.suffix,
+        variantKey: newPrefix + "*" + afterStar,
         semver: reparsed.semver,
         isFloating: false,
       };
@@ -236,6 +291,18 @@ function reparseWithSuffixInference(parsed: ParsedTag[]): ParsedTag[] {
     }
   }
   return result;
+}
+
+function floatingMatchesGroup(
+  floatingKey: string,
+  groupKey: string,
+): boolean {
+  if (floatingKey === groupKey) return true;
+  const suffix = groupKey.replace(/^[^*]*\*/, "");
+  if (suffix.startsWith("-")) {
+    return floatingKey === suffix.slice(1);
+  }
+  return suffix === "" && floatingKey === groupKey;
 }
 
 export function groupByVariant(
@@ -261,7 +328,7 @@ export function groupByVariant(
   const versionedGroups = new Map<string, ParsedTag[]>();
   for (const p of parsed) {
     if (!p.isFloating) {
-      const key = p.prefix + "\0" + p.suffix;
+      const key = p.variantKey;
       if (!versionedGroups.has(key)) {
         versionedGroups.set(key, []);
       }
@@ -273,29 +340,22 @@ export function groupByVariant(
 
   const result: VariantGroup[] = [];
 
-  for (const [key, versioned] of versionedGroups) {
+  for (const [groupKey, versioned] of versionedGroups) {
     versioned.sort((a, b) => {
       const cmp = compareVersions(b, a);
       if (cmp !== 0) return cmp;
-      if (a.prefix && !b.prefix) return 1;
-      if (!a.prefix && b.prefix) return -1;
       return a.original.localeCompare(b.original);
     });
 
     const latest = versioned.length > 0 ? versioned[0] : null;
     const older = versioned.slice(1);
 
-    const parts = key.split("\0");
-    const groupPrefix = parts[0];
-    const groupSuffix = parts[1] ?? "";
-
     const matchingFloating = floatingTags.filter(
-      (f) => f.prefix === groupPrefix && f.suffix === groupSuffix,
+      (f) => floatingMatchesGroup(f.variantKey, groupKey),
     );
 
     result.push({
-      prefix: groupPrefix,
-      suffix: groupSuffix,
+      variantKey: groupKey,
       latest,
       older,
       floating: matchingFloating,
@@ -303,16 +363,16 @@ export function groupByVariant(
   }
 
   const nonMatchedFloating = floatingTags.filter(
-    (f) => !result.some((v) => v.prefix === f.prefix && v.suffix === f.suffix),
+    (f) =>
+      !result.some((v) => floatingMatchesGroup(f.variantKey, v.variantKey)),
   );
 
-  const defaultVariant = result.find((v) => v.prefix === "" && v.suffix === "");
+  const defaultVariant = result.find((v) => v.variantKey === "*");
   if (defaultVariant) {
     defaultVariant.floating.push(...nonMatchedFloating);
   } else if (nonMatchedFloating.length > 0) {
     result.push({
-      prefix: "",
-      suffix: "",
+      variantKey: "*",
       latest: null,
       older: [],
       floating: nonMatchedFloating,
@@ -320,15 +380,17 @@ export function groupByVariant(
   }
 
   return result.sort((a, b) => {
-    if (
-      a.prefix === "" && a.suffix === "" && (b.prefix !== "" || b.suffix !== "")
-    ) return -1;
-    if (
-      b.prefix === "" && b.suffix === "" && (a.prefix !== "" || a.suffix !== "")
-    ) return 1;
-    if (a.suffix === "" && b.suffix !== "") return -1;
-    if (a.suffix !== "" && b.suffix === "") return 1;
-    return a.suffix.localeCompare(b.suffix);
+    if (a.variantKey === "*" && b.variantKey !== "*") return -1;
+    if (b.variantKey === "*" && a.variantKey !== "*") return 1;
+    const suffixA = a.variantKey.includes("*")
+      ? a.variantKey.slice(a.variantKey.indexOf("*") + 1)
+      : a.variantKey;
+    const suffixB = b.variantKey.includes("*")
+      ? b.variantKey.slice(b.variantKey.indexOf("*") + 1)
+      : b.variantKey;
+    if (suffixA === "" && suffixB !== "") return -1;
+    if (suffixA !== "" && suffixB === "") return 1;
+    return suffixA.localeCompare(suffixB);
   });
 }
 
@@ -339,9 +401,7 @@ export function findMatchingVariant(
   const current = parseTag(currentTag);
 
   for (const variant of variants) {
-    if (
-      variant.prefix === current.prefix && variant.suffix === current.suffix
-    ) {
+    if (variant.variantKey === current.variantKey) {
       return variant;
     }
   }
@@ -361,14 +421,13 @@ export function findMatchingVariant(
   return null;
 }
 
-function reconstructTag(
-  prefix: string,
-  version: string,
-  suffix: string,
+export function reconstructTag(
+  variantKey: string,
+  version: string[],
 ): string {
-  let result = prefix + version;
-  if (suffix && !prefix.startsWith(suffix + "-")) {
-    result += "-" + suffix;
+  let result = variantKey;
+  for (const v of version) {
+    result = result.replace("*", v);
   }
   return result;
 }
@@ -396,11 +455,7 @@ export function findBestUpgrade(
 
   if (current.isFloating) {
     if (!variant.latest) return null;
-    return reconstructTag(
-      current.prefix,
-      variant.latest.version,
-      variant.latest.suffix,
-    );
+    return reconstructTag(variant.variantKey, variant.latest.version);
   }
 
   if (!variant.latest) return null;
@@ -408,11 +463,7 @@ export function findBestUpgrade(
   const cmp = compareVersions(current, variant.latest);
 
   if (cmp < 0) {
-    return reconstructTag(
-      current.prefix,
-      variant.latest.version,
-      variant.latest.suffix,
-    );
+    return reconstructTag(current.variantKey, variant.latest.version);
   }
 
   return null;
@@ -421,8 +472,6 @@ export function findBestUpgrade(
 export function findVariantIndex(update: ImageUpdate): number {
   if (!update.currentVariant) return 0;
   return update.variants.findIndex(
-    (v) =>
-      v.prefix === update.currentVariant!.prefix &&
-      v.suffix === update.currentVariant!.suffix,
+    (v) => v.variantKey === update.currentVariant!.variantKey,
   );
 }
