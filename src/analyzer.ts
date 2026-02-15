@@ -231,7 +231,7 @@ function reparseWithSuffixInference(parsed: ParsedTag[]): ParsedTag[] {
         original: p.original,
         prefix: suffix + "-" + reparsed.prefix,
         version: reparsed.version,
-        suffix: suffix,
+        suffix: reparsed.suffix,
         semver: reparsed.semver,
         isFloating: false,
       };

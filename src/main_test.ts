@@ -691,7 +691,7 @@ Deno.test("groupByVariant - imagegenius with suffix inference", () => {
   assertEquals(suffixNoml?.older.length, 1);
   assertEquals(suffixNoml?.older[0].original, "2.4.1-noml");
 
-  const prefixNoml = variants.find((v) => v.prefix === "noml-v" && v.suffix === "noml");
+  const prefixNoml = variants.find((v) => v.prefix === "noml-v" && v.suffix === "");
   assertEquals(prefixNoml?.latest?.original, "noml-v2.5.6-ig356");
   assertEquals(prefixNoml?.older.length, 1);
   assertEquals(prefixNoml?.older[0].original, "noml-v2.4.1-ig300");
