@@ -41,4 +41,5 @@ export interface ImageUpdate {
 export interface TagFetchResult {
   tags: string[];
   digestMap?: Map<string, string>;
+  foundCurrentTag?: boolean;
 }

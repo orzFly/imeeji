@@ -154,9 +154,10 @@ export function getRepositoryKey(
 export async function fetchTagsEnriched(
   registry: string,
   repository: string,
-): Promise<{ tags: string[]; digestMap?: Map<string, string> }> {
+  currentTag?: string,
+): Promise<{ tags: string[]; digestMap?: Map<string, string>; foundCurrentTag?: boolean }> {
   if (isDockerHubRepository(registry)) {
-    return fetchDockerHubTags(repository);
+    return fetchDockerHubTags(repository, currentTag);
   }
 
   const tags = await fetchOciTags(registry, repository);

@@ -115,7 +115,7 @@ async function main(): Promise<void> {
 
   const [results, lsioMetadata] = await Promise.all([
     mapPool(uniqueEntries, 8, async ([key, image]) => {
-      const result = await fetchTagsEnriched(image.registry, image.repository);
+      const result = await fetchTagsEnriched(image.registry, image.repository, image.tag);
       return { key, result };
     }),
     lsioMetadataPromise ?? Promise.resolve(null),
@@ -124,6 +124,23 @@ async function main(): Promise<void> {
   const repoCache = new Map<string, TagFetchResult>();
   for (const { key, result } of results) {
     repoCache.set(key, result);
+  }
+
+  const warnings: string[] = [];
+  for (const { key, result } of results) {
+    if (result.foundCurrentTag === false) {
+      const image = uniqueEntries.find(([k]) => k === key)?.[1];
+      if (image) {
+        warnings.push(`WARNING: Current tag '${image.tag}' for ${key} not found in recent 1000 tags - may be very old`);
+      }
+    }
+  }
+  if (warnings.length > 0) {
+    console.log("");
+    for (const w of warnings) {
+      console.log(w);
+    }
+    console.log("");
   }
 
   const updates: ImageUpdate[] = [];
