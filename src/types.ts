@@ -1,4 +1,4 @@
-import type { LsioImageMetadata } from "./lsio.ts";
+import type { LsioImageMetadata } from "./integrations/lsio.ts";
 
 export interface ImageRef {
   full: string;

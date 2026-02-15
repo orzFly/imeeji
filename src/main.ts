@@ -10,7 +10,7 @@ import { selectUpdates } from "./ui.ts";
 import { applyUpdates as applyPatches, generateDiff } from "./patcher.ts";
 import type { ImageUpdate, TagFetchResult } from "./types.ts";
 import { mapPool } from "./pool.ts";
-import { fetchLsioMetadata, getLsioFloatingTags, isLinuxServerRepo } from "./lsio.ts";
+import { fetchLsioMetadata, getLsioFloatingTags, isLinuxServerRepo } from "./integrations/lsio.ts";
 
 const VERSION = "0.1.0";
 

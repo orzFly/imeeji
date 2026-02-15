@@ -1,4 +1,5 @@
 import { myFetch } from "./fetch.ts";
+import { fetchDockerHubTags, isDockerHubRepository } from "./integrations/dockerHub.ts";
 
 export interface AuthChallenge {
   realm: string;
@@ -15,30 +16,8 @@ export interface TagsResponse {
   tags: string[];
 }
 
-export interface DockerHubTag {
-  name: string;
-  digest: string;
-}
-
-export interface DockerHubTagsResponse {
-  results: DockerHubTag[];
-}
-
 function getRegistryHost(registry: string): string {
   return REGISTRY_ALIASES[registry] ?? registry;
-}
-
-async function getDockerHubToken(repository: string): Promise<string | null> {
-  const authUrl =
-    `https://auth.docker.io/token?service=registry.docker.io&scope=repository:${repository}:pull`;
-  try {
-    const response = await myFetch(authUrl);
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data.token;
-  } catch {
-    return null;
-  }
 }
 
 export function parseWwwAuthenticate(header: string): AuthChallenge | null {
@@ -89,23 +68,13 @@ function fetchWithAuth(
   return myFetch(url, { headers });
 }
 
-export async function fetchTags(
+async function fetchOciTags(
   registry: string,
   repository: string,
 ): Promise<string[]> {
   const host = getRegistryHost(registry);
   const allTags: string[] = [];
-
   let token: string | undefined;
-
-  if (registry === "docker.io") {
-    const t = await getDockerHubToken(repository);
-    if (!t) {
-      console.error(`Failed to get auth token for docker.io/${repository}`);
-      return [];
-    }
-    token = t;
-  }
 
   let url: string | null = `https://${host}/v2/${repository}/tags/list?n=100`;
   const seenUrls = new Set<string>();
@@ -182,49 +151,14 @@ export function getRepositoryKey(
   return `${registry}/${repository}`;
 }
 
-async function fetchDockerHubTagsWithDigests(
-  repository: string,
-): Promise<Map<string, string>> {
-  const digestMap = new Map<string, string>();
-
-  let namespace = "library";
-  let repo = repository;
-
-  if (repository.includes("/")) {
-    const parts = repository.split("/");
-    namespace = parts[0];
-    repo = parts.slice(1).join("/");
-  }
-
-  const url =
-    `https://hub.docker.com/v2/namespaces/${namespace}/repositories/${repo}/tags?page_size=100`;
-
-  try {
-    const response = await myFetch(url);
-    if (!response.ok) return digestMap;
-
-    const data: DockerHubTagsResponse = await response.json();
-
-    for (const tag of data.results) {
-      digestMap.set(tag.name, tag.digest);
-    }
-  } catch {
-    // Silently fall back to no digest data
-  }
-
-  return digestMap;
-}
-
 export async function fetchTagsEnriched(
   registry: string,
   repository: string,
 ): Promise<{ tags: string[]; digestMap?: Map<string, string> }> {
-  const tags = await fetchTags(registry, repository);
-
-  if (registry === "docker.io") {
-    const digestMap = await fetchDockerHubTagsWithDigests(repository);
-    return { tags, digestMap };
+  if (isDockerHubRepository(registry)) {
+    return fetchDockerHubTags(repository);
   }
 
+  const tags = await fetchOciTags(registry, repository);
   return { tags };
 }

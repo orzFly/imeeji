@@ -1,4 +1,4 @@
-import { myFetch } from "./fetch.ts";
+import { myFetch } from "../fetch.ts";
 
 export function isLinuxServerRepo(repository: string): boolean {
   return repository.startsWith("linuxserver/");
