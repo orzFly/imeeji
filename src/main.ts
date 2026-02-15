@@ -1,4 +1,5 @@
 import { parseArgs } from "@std/cli/parse-args";
+import { readFile, writeFile } from "node:fs/promises";
 import { findImages } from "./parser.ts";
 import { fetchTagsEnriched, getRepositoryKey } from "./registry.ts";
 import {
@@ -43,7 +44,7 @@ AD-HOC MODE EXAMPLES:
 }
 
 async function main(): Promise<void> {
-  const parsed = parseArgs(Deno.args, {
+  const parsed = parseArgs(process.argv.slice(2), {
     boolean: ["dry-run", "yes", "help", "version"],
     alias: {
       n: "dry-run",
@@ -56,12 +57,12 @@ async function main(): Promise<void> {
 
   if (parsed.version) {
     console.log(`imeeji ${VERSION}`);
-    Deno.exit(0);
+    process.exit(0);
   }
 
   if (parsed.help) {
     printHelp();
-    Deno.exit(0);
+    process.exit(0);
   }
 
   const arg = parsed._[0]?.toString() ?? null;
@@ -69,7 +70,7 @@ async function main(): Promise<void> {
   if (!arg) {
     console.error("Error: No file or image specified");
     printHelp();
-    Deno.exit(1);
+    process.exit(1);
   }
 
   const filePath = arg;
@@ -78,14 +79,14 @@ async function main(): Promise<void> {
 
   let content: string;
   try {
-    content = await Deno.readTextFile(filePath);
+    content = await readFile(filePath, "utf-8");
   } catch {
     const parsedImage = parseImageRef(arg);
     const result = await runAdhocMode(parsedImage, autoYes);
     if (result) {
       console.log(result);
     } else {
-      Deno.exit(1);
+      process.exit(1);
     }
     return;
   }
@@ -192,14 +193,29 @@ async function main(): Promise<void> {
     console.log(`\n(Dry run - no changes made)`);
   } else {
     const newContent = applyPatches(content, selectedUpdates);
-    await Deno.writeTextFile(filePath, newContent);
+    await writeFile(filePath, newContent, "utf-8");
     console.log(`\nUpdated ${selectedUpdates.length} image(s) in ${filePath}`);
   }
 }
 
-if (import.meta.main) {
+function isMainModule(): boolean {
+  if (import.meta.main !== undefined) {
+    return import.meta.main;
+  }
+  if (typeof process !== "undefined" && process.argv?.[1]) {
+    try {
+      const { URL, pathToFileURL } = require("node:url") as typeof import("node:url");
+      return new URL(import.meta.url).href === pathToFileURL(process.argv[1]).href;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+if (isMainModule()) {
   main().catch((e) => {
     console.error("Error:", e.message);
-    Deno.exit(1);
+    process.exit(1);
   });
 }

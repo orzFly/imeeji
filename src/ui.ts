@@ -58,24 +58,23 @@ export async function selectUpdates(
 
   const ENTER_ALT = "\x1b[?1049h";
   const EXIT_ALT = "\x1b[?1049l";
-  const encoder = new TextEncoder();
 
   let cleaned = false;
   const cleanup = () => {
     if (cleaned) return;
     cleaned = true;
-    Deno.stdout.writeSync(encoder.encode(EXIT_ALT));
+    process.stdout.write(EXIT_ALT);
   };
 
   const sigintHandler = () => {
     cleanup();
-    Deno.exit(130);
+    process.exit(130);
   };
 
-  Deno.addSignalListener("SIGINT", sigintHandler);
+  process.on("SIGINT", sigintHandler);
   globalThis.addEventListener("unload", cleanup);
 
-  Deno.stdout.writeSync(encoder.encode(ENTER_ALT));
+  process.stdout.write(ENTER_ALT);
 
   return new Promise<ImageRef[]>((resolve) => {
     const app = render(
@@ -86,7 +85,7 @@ export async function selectUpdates(
         onDone: (results: ImageRef[]) => {
           app.unmount();
           cleanup();
-          Deno.removeSignalListener("SIGINT", sigintHandler);
+          process.off("SIGINT", sigintHandler);
           resolve(results);
         },
       }),

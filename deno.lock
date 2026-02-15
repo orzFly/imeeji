@@ -8,7 +8,8 @@
     "jsr:@std/semver@^1.0.8": "1.0.8",
     "npm:@types/react@19": "19.2.14",
     "npm:ink@6": "6.7.0_@types+react@19.2.14_react@19.2.4",
-    "npm:react@19": "19.2.4"
+    "npm:react@19": "19.2.4",
+    "npm:terminal-size@^4.0.1": "4.0.1"
   },
   "jsr": {
     "@std/assert@1.0.18": {
@@ -266,7 +267,8 @@
       "jsr:@std/semver@^1.0.8",
       "npm:@types/react@19",
       "npm:ink@6",
-      "npm:react@19"
+      "npm:react@19",
+      "npm:terminal-size@^4.0.1"
     ]
   }
 }

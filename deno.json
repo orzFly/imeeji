@@ -31,6 +31,7 @@
     "@types/react": "npm:@types/react@^19",
     "react": "npm:react@^19",
     "react/jsx-runtime": "npm:react@^19/jsx-runtime",
-    "ink": "npm:ink@^6"
+    "ink": "npm:ink@^6",
+    "terminal-size": "npm:terminal-size@^4.0.1"
   }
 }

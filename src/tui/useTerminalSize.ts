@@ -1,12 +1,9 @@
 import { useState, useEffect } from "react";
 import { useStdout } from "ink";
+import terminalSize from "terminal-size";
 
-export function useTerminalSize(): { rows: number; columns: number } {
-  const { stdout } = useStdout();
-  const [size, setSize] = useState(() => {
-    if (stdout?.rows != null && stdout?.columns != null) {
-      return { rows: stdout.rows, columns: stdout.columns };
-    }
+function getTerminalSize(): { rows: number; columns: number } {
+  if (typeof Deno !== "undefined" && typeof Deno.consoleSize === "function") {
     try {
       const consoleSize = Deno.consoleSize();
       return {
@@ -14,8 +11,23 @@ export function useTerminalSize(): { rows: number; columns: number } {
         columns: consoleSize.columns || 80,
       };
     } catch {
-      return { rows: 24, columns: 80 };
+      // fall through
     }
+  }
+  const size = terminalSize();
+  return {
+    rows: size.rows || 24,
+    columns: size.columns || 80,
+  };
+}
+
+export function useTerminalSize(): { rows: number; columns: number } {
+  const { stdout } = useStdout();
+  const [size, setSize] = useState(() => {
+    if (stdout?.rows != null && stdout?.columns != null) {
+      return { rows: stdout.rows, columns: stdout.columns };
+    }
+    return getTerminalSize();
   });
 
   useEffect(() => {
