@@ -125,7 +125,12 @@ export async function fetchImageVariants(
   const lsioMeta = lsioInfo?.meta;
   const floatingTags = lsioInfo?.floatingTags;
 
-  const variants = groupByVariant(result.tags, result.digestMap, floatingTags);
+  const variants = groupByVariant(
+    result.tags,
+    result.digestMap,
+    floatingTags,
+    result.timestampMap,
+  );
 
   return { result, variants, lsioMetadata: lsioMeta };
 }

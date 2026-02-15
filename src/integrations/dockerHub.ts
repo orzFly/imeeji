@@ -16,6 +16,7 @@ export interface DockerHubTagsResponse {
 export interface DockerHubFetchResult {
   tags: string[];
   digestMap: Map<string, string>;
+  timestampMap: Map<string, Date>;
   foundCurrentTag?: boolean;
 }
 
@@ -42,6 +43,7 @@ export async function fetchDockerHubTags(
 
   const tags: string[] = [];
   const digestMap = new Map<string, string>();
+  const timestampMap = new Map<string, Date>();
   let foundCurrentTag = currentTag ? false : undefined;
   let page = 1;
   let nextUrl: string | null =
@@ -61,6 +63,12 @@ export async function fetchDockerHubTags(
         if (tag.digest) {
           digestMap.set(tag.name, tag.digest);
         }
+        if (tag.tag_last_pushed) {
+          const ts = new Date(tag.tag_last_pushed);
+          if (!isNaN(ts.getTime())) {
+            timestampMap.set(tag.name, ts);
+          }
+        }
         if (currentTag && tag.name === currentTag) {
           foundCurrentTag = true;
         }
@@ -75,6 +83,12 @@ export async function fetchDockerHubTags(
               tags.push(tag.name);
               if (tag.digest) {
                 digestMap.set(tag.name, tag.digest);
+              }
+              if (tag.tag_last_pushed) {
+                const ts = new Date(tag.tag_last_pushed);
+                if (!isNaN(ts.getTime())) {
+                  timestampMap.set(tag.name, ts);
+                }
               }
             }
           }
@@ -93,5 +107,5 @@ export async function fetchDockerHubTags(
     foundCurrentTag = false;
   }
 
-  return { tags, digestMap, foundCurrentTag };
+  return { tags, digestMap, timestampMap, foundCurrentTag };
 }

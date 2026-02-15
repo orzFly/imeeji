@@ -75,9 +75,9 @@ export function VariantPicker({
         const previewStr = preview.join(", ") +
           (v.older.length > 2 ? " …" : "");
 
-        const floatingStr = v.floating.slice(0, 2).map((t) => t.original).join(
-          ", ",
-        );
+        const floatingTags = v.floating.slice(0, 3).map((t) => t.original);
+        const floatingStr = floatingTags.join(", ") +
+          (v.floating.length > 3 ? " …" : "");
 
         return (
           <Box key={idx} flexDirection="column" marginBottom={1}>
@@ -91,13 +91,9 @@ export function VariantPicker({
                 {isCurrent ? "*" : ""}
               </Text>
             </Box>
-            <Box marginLeft={3}>
-              <Text color="green">{previewStr}</Text>
-            </Box>
+            <Text color="green">{`   ${previewStr}`}</Text>
             {floatingStr && (
-              <Box marginLeft={3}>
-                <Text dimColor>({floatingStr})</Text>
-              </Box>
+              <Text dimColor>{`   (${floatingStr})`}</Text>
             )}
           </Box>
         );

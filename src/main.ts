@@ -220,7 +220,12 @@ async function main(): Promise<void> {
       const lsioMeta = lsioInfo?.meta;
       const floatingTags = lsioInfo?.floatingTags;
 
-      const variants = groupByVariant(tags, result?.digestMap, floatingTags);
+      const variants = groupByVariant(
+        tags,
+        result?.digestMap,
+        floatingTags,
+        result?.timestampMap,
+      );
       const newTag = findBestUpgrade(image.tag, variants);
 
       if (newTag) {

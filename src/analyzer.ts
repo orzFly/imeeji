@@ -309,6 +309,7 @@ export function groupByVariant(
   tags: string[],
   digestMap?: Map<string, string>,
   floatingTagOverrides?: Set<string>,
+  timestampMap?: Map<string, Date>,
 ): VariantGroup[] {
   let parsed = tags.map(parseTag);
 
@@ -354,9 +355,14 @@ export function groupByVariant(
       (f) => floatingMatchesGroup(f.variantKey, groupKey),
     );
 
+    const latestTimestamp = latest
+      ? timestampMap?.get(latest.original)
+      : undefined;
+
     result.push({
       variantKey: groupKey,
       latest,
+      latestTimestamp,
       older,
       floating: matchingFloating,
     });
@@ -382,6 +388,17 @@ export function groupByVariant(
   return result.sort((a, b) => {
     if (a.variantKey === "*" && b.variantKey !== "*") return -1;
     if (b.variantKey === "*" && a.variantKey !== "*") return 1;
+
+    if (a.latestTimestamp && b.latestTimestamp) {
+      const timeDiff = b.latestTimestamp.getTime() -
+        a.latestTimestamp.getTime();
+      if (timeDiff !== 0) return timeDiff;
+    } else if (a.latestTimestamp && !b.latestTimestamp) {
+      return -1;
+    } else if (!a.latestTimestamp && b.latestTimestamp) {
+      return 1;
+    }
+
     const suffixA = a.variantKey.includes("*")
       ? a.variantKey.slice(a.variantKey.indexOf("*") + 1)
       : a.variantKey;

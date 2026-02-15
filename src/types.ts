@@ -27,6 +27,7 @@ export interface ParsedTag {
 export interface VariantGroup {
   variantKey: string;
   latest: ParsedTag | null;
+  latestTimestamp?: Date;
   older: ParsedTag[];
   floating: ParsedTag[];
 }
@@ -43,5 +44,6 @@ export interface ImageUpdate {
 export interface TagFetchResult {
   tags: string[];
   digestMap?: Map<string, string>;
+  timestampMap?: Map<string, Date>;
   foundCurrentTag?: boolean;
 }

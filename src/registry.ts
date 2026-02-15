@@ -19,7 +19,12 @@ export async function fetchTagsEnriched(
   repository: string,
   currentTag?: string,
 ): Promise<
-  { tags: string[]; digestMap?: Map<string, string>; foundCurrentTag?: boolean }
+  {
+    tags: string[];
+    digestMap?: Map<string, string>;
+    timestampMap?: Map<string, Date>;
+    foundCurrentTag?: boolean;
+  }
 > {
   if (isDockerHubRepository(registry)) {
     return fetchDockerHubTags(repository, currentTag);
