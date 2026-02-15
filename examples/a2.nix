@@ -68,6 +68,12 @@
           };
         };
 
+        virtualisation.quadlet.containers.immich = {
+          containerConfig = {
+            image = "ghcr.io/imagegenius/immich:openvino-v2.4.1-ig137";
+          };
+        };
+
       })
   ];
 }
