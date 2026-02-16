@@ -7,6 +7,9 @@ const STANDARD_VERSION_REGEX =
 const ARCH_PREFIX_REGEX =
   /^(amd64|arm64v8|arm32v[567]|i386|s390x|ppc64le|riscv64|mips64le)-/i;
 const GIT_HASH_BUILD_REGEX = /^([0-9a-f]{7,8})-([a-z]{1,2})(\d+)$/i;
+const PREFIXED_HASH_BUILD_REGEX = /^([a-z]+)-([0-9a-f]{7,8}-[a-z]{1,2}\d+)$/i;
+const VERSION_HASH_REGEX = /^version-([0-9a-f]{7,8})$/i;
+const PREFIXED_VERSION_HASH_REGEX = /^([a-z]+)-version-([0-9a-f]{7,8})$/i;
 const EDITION_BUILD_REGEX = /^(\d+(?:\.\d+)*)-(([a-zA-Z]{2,4})\.(\d+))$/;
 const PRE_RELEASE_KEYWORDS =
   /^(?:rc|beta|alpha|dev|preview|canary|nightly|unstable)$/i;
@@ -62,6 +65,39 @@ export function parseTag(tag: string): ParsedTag {
   ) {
     prefix += "v";
     remaining = remaining.slice(1);
+  }
+
+  const versionHashMatch = remaining.match(VERSION_HASH_REGEX);
+  if (versionHashMatch) {
+    return {
+      original: tag,
+      version: [versionHashMatch[1]],
+      variantKey: prefix + "version-*",
+      semver: false,
+      isFloating: false,
+    };
+  }
+
+  const prefixedHashBuildMatch = remaining.match(PREFIXED_HASH_BUILD_REGEX);
+  if (prefixedHashBuildMatch) {
+    return {
+      original: tag,
+      version: [prefixedHashBuildMatch[2]],
+      variantKey: prefix + prefixedHashBuildMatch[1] + "-*",
+      semver: false,
+      isFloating: false,
+    };
+  }
+
+  const prefixedVersionHashMatch = remaining.match(PREFIXED_VERSION_HASH_REGEX);
+  if (prefixedVersionHashMatch) {
+    return {
+      original: tag,
+      version: [prefixedVersionHashMatch[2]],
+      variantKey: prefix + prefixedVersionHashMatch[1] + "-version-*",
+      semver: false,
+      isFloating: false,
+    };
   }
 
   const hashBuildMatch = remaining.match(GIT_HASH_BUILD_REGEX);

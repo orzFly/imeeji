@@ -869,3 +869,98 @@ Deno.test("findBestUpgrade - edition build counter upgrade", () => {
   const result = findBestUpgrade("17.8.0-ee.0", variants);
   assertEquals(result, "17.8.0-ee.1");
 });
+
+Deno.test("parseTag - lsio focal hash build", () => {
+  const result = parseTag("focal-3cc49244-ls21");
+  assertEquals(result.variantKey, "focal-*");
+  assertEquals(result.version, ["3cc49244-ls21"]);
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - lsio jammy hash build", () => {
+  const result = parseTag("jammy-3fec435e-ls1");
+  assertEquals(result.variantKey, "jammy-*");
+  assertEquals(result.version, ["3fec435e-ls1"]);
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - lsio bionic hash build", () => {
+  const result = parseTag("bionic-d44ccdfe-ls6");
+  assertEquals(result.variantKey, "bionic-*");
+  assertEquals(result.version, ["d44ccdfe-ls6"]);
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - lsio arch focal hash build", () => {
+  const result = parseTag("amd64-focal-3cc49244-ls21");
+  assertEquals(result.variantKey, "amd64-focal-*");
+  assertEquals(result.version, ["3cc49244-ls21"]);
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - lsio version hash", () => {
+  const result = parseTag("version-a7da6fde");
+  assertEquals(result.variantKey, "version-*");
+  assertEquals(result.version, ["a7da6fde"]);
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - lsio arch version hash", () => {
+  const result = parseTag("amd64-version-a7da6fde");
+  assertEquals(result.variantKey, "amd64-version-*");
+  assertEquals(result.version, ["a7da6fde"]);
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - lsio focal version hash", () => {
+  const result = parseTag("focal-version-3cc49244");
+  assertEquals(result.variantKey, "focal-version-*");
+  assertEquals(result.version, ["3cc49244"]);
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("groupByVariant - lsio codename variants", () => {
+  const tags = [
+    "focal-3cc49244-ls21",
+    "focal-a1b2c3d4-ls20",
+    "jammy-5fec435e-ls10",
+    "jammy-4fec435e-ls9",
+    "bionic-d44ccdfe-ls6",
+    "latest",
+  ];
+  const variants = groupByVariant(tags);
+
+  const focalVariant = variants.find((v) => v.variantKey === "focal-*");
+  assertEquals(focalVariant?.latest?.original, "focal-3cc49244-ls21");
+  assertEquals(focalVariant?.older.length, 1);
+  assertEquals(focalVariant?.older[0].original, "focal-a1b2c3d4-ls20");
+
+  const jammyVariant = variants.find((v) => v.variantKey === "jammy-*");
+  assertEquals(jammyVariant?.latest?.original, "jammy-5fec435e-ls10");
+  assertEquals(jammyVariant?.older.length, 1);
+  assertEquals(jammyVariant?.older[0].original, "jammy-4fec435e-ls9");
+
+  const bionicVariant = variants.find((v) => v.variantKey === "bionic-*");
+  assertEquals(bionicVariant?.latest?.original, "bionic-d44ccdfe-ls6");
+});
+
+Deno.test("findBestUpgrade - lsio focal variant", () => {
+  const tags = ["focal-3cc49244-ls21", "focal-a1b2c3d4-ls20", "focal-latest"];
+  const variants = groupByVariant(tags);
+  const result = findBestUpgrade("focal-a1b2c3d4-ls20", variants);
+  assertEquals(result, "focal-3cc49244-ls21");
+});
+
+Deno.test("parseTag - false positive ps-8.0.44-35 unchanged", () => {
+  const result = parseTag("ps-8.0.44-35");
+  assertEquals(result.variantKey, "ps-8.0.44-35");
+  assertEquals(result.version, []);
+  assertEquals(result.isFloating, true);
+});
+
+Deno.test("parseTag - false positive trixie-20260202-slim unchanged", () => {
+  const result = parseTag("trixie-20260202-slim");
+  assertEquals(result.variantKey, "trixie-20260202-slim");
+  assertEquals(result.version, []);
+  assertEquals(result.isFloating, true);
+});
