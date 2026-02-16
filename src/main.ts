@@ -32,15 +32,16 @@ USAGE:
   imeeji [OPTIONS] <IMAGE>       # Ad-hoc mode: select version for image
 
 OPTIONS:
-  -n, --dry-run          Print diff without modifying files
-  -y, --yes              Auto-accept latest versions (non-interactive)
-  --allow-comments       Parse images inside comment lines
-  --include <PATTERN>    Include glob pattern (repeatable, adds to defaults)
-  --exclude <PATTERN>    Exclude glob pattern (repeatable)
-  --exclude-default      Disable default include patterns
-  --include-ignored      Include files ignored by .gitignore
-  -h, --help             Print help message
-  -V, --version          Print version
+   -n, --dry-run          Print diff without modifying files
+   -y, --yes              Auto-accept latest versions (non-interactive)
+   -i, --image            Force ad-hoc mode (argument is image, not path)
+   --allow-comments       Parse images inside comment lines
+   --include <PATTERN>    Include glob pattern (repeatable, adds to defaults)
+   --exclude <PATTERN>    Exclude glob pattern (repeatable)
+   --exclude-default      Disable default include patterns
+   --include-ignored      Include files ignored by .gitignore
+   -h, --help             Print help message
+   -V, --version          Print version
 
 PATH MODE EXAMPLES:
   imeeji config.nix                    Interactive upgrade single file
@@ -69,6 +70,7 @@ async function main(): Promise<void> {
       "exclude-default",
       "include-ignored",
       "allow-comments",
+      "image",
     ],
     string: ["include", "exclude"],
     alias: {
@@ -76,6 +78,7 @@ async function main(): Promise<void> {
       y: "yes",
       h: "help",
       V: "version",
+      i: "image",
     },
     collect: ["include", "exclude"],
     stopEarly: false,
@@ -92,6 +95,22 @@ async function main(): Promise<void> {
   }
 
   const inputPaths = parsed._.map(String);
+  const imageMode = parsed.image ?? false;
+
+  if (imageMode) {
+    if (inputPaths.length !== 1) {
+      console.error("Error: --image mode requires exactly one image reference");
+      process.exit(1);
+    }
+    const parsedImage = parseImageRef(inputPaths[0]);
+    const autoYes = parsed.yes ?? false;
+    const result = await runAdhocMode(parsedImage, autoYes);
+    if (result) {
+      console.log(result);
+      return;
+    }
+    process.exit(1);
+  }
 
   if (inputPaths.length === 0) {
     console.error("Error: No path or image specified");

@@ -92,9 +92,7 @@ export function VariantPicker({
               </Text>
             </Box>
             <Text color="green">{`   ${previewStr}`}</Text>
-            {floatingStr && (
-              <Text dimColor>{`   (${floatingStr})`}</Text>
-            )}
+            {floatingStr && <Text dimColor>{`   (${floatingStr})`}</Text>}
           </Box>
         );
       })}
