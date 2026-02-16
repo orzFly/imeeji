@@ -344,16 +344,58 @@ function reparseWithSuffixInference(parsed: ParsedTag[]): ParsedTag[] {
   return result;
 }
 
-function floatingMatchesGroup(
+function splitVariantTokens(key: string): string[] {
+  return key.split("-");
+}
+
+function floatingWildcardMatchesGroup(
   floatingKey: string,
   groupKey: string,
 ): boolean {
-  if (floatingKey === groupKey) return true;
-  const suffix = groupKey.replace(/^[^*]*\*/, "");
-  if (suffix.startsWith("-")) {
-    return floatingKey === suffix.slice(1);
+  const groupTokens = splitVariantTokens(groupKey);
+  if (!groupTokens.includes("*")) return false;
+
+  const floatingTokens = splitVariantTokens(floatingKey);
+  const fixedTokens = groupTokens.filter((token) => token !== "*");
+
+  if (fixedTokens.length !== floatingTokens.length) return false;
+
+  for (let i = 0; i < fixedTokens.length; i++) {
+    if (fixedTokens[i] !== floatingTokens[i]) return false;
   }
-  return suffix === "" && floatingKey === groupKey;
+
+  return true;
+}
+
+function compareFloatingGroupSpecificity(a: string, b: string): number {
+  const aTokens = splitVariantTokens(a);
+  const bTokens = splitVariantTokens(b);
+
+  const aFixedCount = aTokens.filter((token) => token !== "*").length;
+  const bFixedCount = bTokens.filter((token) => token !== "*").length;
+  if (aFixedCount !== bFixedCount) return bFixedCount - aFixedCount;
+
+  const aWildcardCount = aTokens.filter((token) => token === "*").length;
+  const bWildcardCount = bTokens.filter((token) => token === "*").length;
+  if (aWildcardCount !== bWildcardCount) return aWildcardCount - bWildcardCount;
+
+  const aIsPrefixWildcard =
+    aTokens.length > 1 && aTokens[aTokens.length - 1] === "*";
+  const bIsPrefixWildcard =
+    bTokens.length > 1 && bTokens[bTokens.length - 1] === "*";
+  if (aIsPrefixWildcard !== bIsPrefixWildcard) {
+    return aIsPrefixWildcard ? -1 : 1;
+  }
+
+  const aIsSuffixWildcard = aTokens.length > 1 && aTokens[0] === "*";
+  const bIsSuffixWildcard = bTokens.length > 1 && bTokens[0] === "*";
+  if (aIsSuffixWildcard !== bIsSuffixWildcard) {
+    return aIsSuffixWildcard ? 1 : -1;
+  }
+
+  if (a.length !== b.length) return b.length - a.length;
+
+  return a.localeCompare(b);
 }
 
 export function groupByVariant(
@@ -402,10 +444,6 @@ export function groupByVariant(
     const latest = versioned.length > 0 ? versioned[0] : null;
     const older = versioned.slice(1);
 
-    const matchingFloating = floatingTags.filter(
-      (f) => floatingMatchesGroup(f.variantKey, groupKey),
-    );
-
     const latestTimestamp = latest
       ? timestampMap?.get(latest.original)
       : undefined;
@@ -415,14 +453,37 @@ export function groupByVariant(
       latest,
       latestTimestamp,
       older,
-      floating: matchingFloating,
+      floating: [],
     });
   }
 
-  const nonMatchedFloating = floatingTags.filter(
-    (f) =>
-      !result.some((v) => floatingMatchesGroup(f.variantKey, v.variantKey)),
-  );
+  const nonMatchedFloating: ParsedTag[] = [];
+  for (const floatingTag of floatingTags) {
+    const exactIdx = result.findIndex(
+      (variant) => variant.variantKey === floatingTag.variantKey,
+    );
+
+    if (exactIdx !== -1) {
+      result[exactIdx].floating.push(floatingTag);
+      continue;
+    }
+
+    const wildcardCandidates = result
+      .map((variant, idx) => ({ variant, idx }))
+      .filter(({ variant }) =>
+        floatingWildcardMatchesGroup(floatingTag.variantKey, variant.variantKey)
+      );
+
+    if (wildcardCandidates.length === 0) {
+      nonMatchedFloating.push(floatingTag);
+      continue;
+    }
+
+    wildcardCandidates.sort((a, b) =>
+      compareFloatingGroupSpecificity(a.variant.variantKey, b.variant.variantKey)
+    );
+    result[wildcardCandidates[0].idx].floating.push(floatingTag);
+  }
 
   const defaultVariant = result.find((v) => v.variantKey === "*");
   if (defaultVariant) {

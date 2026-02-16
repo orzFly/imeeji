@@ -1035,6 +1035,61 @@ Deno.test("groupByVariant - lsio codename variants", () => {
   assertEquals(bionicVariant?.latest?.original, "bionic-d44ccdfe-ls6");
 });
 
+Deno.test("groupByVariant - floating amd64-xenial matches amd64-xenial-*", () => {
+  const tags = [
+    "amd64-xenial-c9268d88-ls79",
+    "amd64-xenial-8ab1d2ef-ls78",
+    "amd64-xenial",
+  ];
+  const variants = groupByVariant(tags);
+
+  const xenialVariant = variants.find((v) => v.variantKey === "amd64-xenial-*");
+  assertEquals(xenialVariant?.latest?.original, "amd64-xenial-c9268d88-ls79");
+  assertEquals(xenialVariant?.floating.length, 1);
+  assertEquals(xenialVariant?.floating[0].original, "amd64-xenial");
+});
+
+Deno.test("groupByVariant - floating enterprise prefers enterprise-* over *-enterprise", () => {
+  const tags = ["enterprise-7.6.9", "7.6.9-enterprise", "enterprise"];
+  const variants = groupByVariant(tags);
+
+  const enterprisePrefix = variants.find((v) => v.variantKey === "enterprise-*");
+  assertEquals(enterprisePrefix?.floating.length, 1);
+  assertEquals(enterprisePrefix?.floating[0].original, "enterprise");
+
+  const enterpriseSuffix = variants.find((v) => v.variantKey === "*-enterprise");
+  assertEquals(enterpriseSuffix?.floating.length, 0);
+});
+
+Deno.test("groupByVariant - floating amd64-enterprise matches amd64-*-enterprise", () => {
+  const tags = ["amd64-7.6.9-enterprise", "amd64-enterprise"];
+  const variants = groupByVariant(tags);
+
+  const enterpriseVariant = variants.find((v) =>
+    v.variantKey === "amd64-*-enterprise"
+  );
+  assertEquals(enterpriseVariant?.latest?.original, "amd64-7.6.9-enterprise");
+  assertEquals(enterpriseVariant?.floating.length, 1);
+  assertEquals(enterpriseVariant?.floating[0].original, "amd64-enterprise");
+});
+
+Deno.test("groupByVariant - floating wildcard matches zero tokens only", () => {
+  const tags = [
+    "amd64-7.6.9-enterprise",
+    "1.0.0",
+    "amd64-foo-enterprise",
+  ];
+  const variants = groupByVariant(tags);
+
+  const enterpriseVariant = variants.find((v) =>
+    v.variantKey === "amd64-*-enterprise"
+  );
+  assertEquals(enterpriseVariant?.floating.length, 0);
+
+  const defaultVariant = variants.find((v) => v.variantKey === "*");
+  assertEquals(defaultVariant?.floating.some((t) => t.original === "amd64-foo-enterprise"), true);
+});
+
 Deno.test("findBestUpgrade - lsio focal variant", () => {
   const tags = ["focal-3cc49244-ls21", "focal-a1b2c3d4-ls20", "focal-latest"];
   const variants = groupByVariant(tags);

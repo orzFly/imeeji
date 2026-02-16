@@ -10,6 +10,7 @@
     "npm:@types/react@19": "19.2.14",
     "npm:ignore-walk@8": "8.0.0",
     "npm:ignore@^7.0.5": "7.0.5",
+    "npm:ink@*": "6.7.0_@types+react@19.2.14_react@19.2.4",
     "npm:ink@6": "6.7.0_@types+react@19.2.14_react@19.2.4",
     "npm:react@19": "19.2.4",
     "npm:terminal-size@^4.0.1": "4.0.1"
