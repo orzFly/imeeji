@@ -17,12 +17,13 @@ export function enterAlternateBuffer(): () => void {
   };
 
   process.on("SIGINT", sigintHandler);
-  globalThis.addEventListener("unload", cleanup);
+  process.on("exit", cleanup);
 
   process.stdout.write(ENTER_ALT);
 
   return () => {
     cleanup();
     process.off("SIGINT", sigintHandler);
+    process.off("exit", cleanup);
   };
 }
