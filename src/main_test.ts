@@ -224,32 +224,32 @@ Deno.test("parseTag - floating krypton-alpine3.22", () => {
   assertEquals(result.isFloating, true);
 });
 
-Deno.test("parseTag - floating enterprise-7.6.9", () => {
+Deno.test("parseTag - versioned enterprise-7.6.9", () => {
   const result = parseTag("enterprise-7.6.9");
-  assertEquals(result.version, []);
-  assertEquals(result.variantKey, "enterprise-7.6.9");
-  assertEquals(result.isFloating, true);
+  assertEquals(result.version, ["7.6.9"]);
+  assertEquals(result.variantKey, "enterprise-*");
+  assertEquals(result.isFloating, false);
 });
 
-Deno.test("parseTag - floating ps-8.0.44-35", () => {
+Deno.test("parseTag - versioned ps-8.0.44-35", () => {
   const result = parseTag("ps-8.0.44-35");
-  assertEquals(result.version, []);
-  assertEquals(result.variantKey, "ps-8.0.44-35");
-  assertEquals(result.isFloating, true);
+  assertEquals(result.version, ["8.0.44-35"]);
+  assertEquals(result.variantKey, "ps-*");
+  assertEquals(result.isFloating, false);
 });
 
-Deno.test("parseTag - floating psmdb-8.0.17", () => {
+Deno.test("parseTag - versioned psmdb-8.0.17", () => {
   const result = parseTag("psmdb-8.0.17");
-  assertEquals(result.version, []);
-  assertEquals(result.variantKey, "psmdb-8.0.17");
-  assertEquals(result.isFloating, true);
+  assertEquals(result.version, ["8.0.17"]);
+  assertEquals(result.variantKey, "psmdb-*");
+  assertEquals(result.isFloating, false);
 });
 
-Deno.test("parseTag - floating community-8.0.0", () => {
+Deno.test("parseTag - versioned community-8.0.0", () => {
   const result = parseTag("community-8.0.0");
-  assertEquals(result.version, []);
-  assertEquals(result.variantKey, "community-8.0.0");
-  assertEquals(result.isFloating, true);
+  assertEquals(result.version, ["8.0.0"]);
+  assertEquals(result.variantKey, "community-*");
+  assertEquals(result.isFloating, false);
 });
 
 Deno.test("parseTag - floating php8.4-fpm-alpine3.22", () => {
@@ -266,11 +266,11 @@ Deno.test("parseTag - floating centos7.9.2009", () => {
   assertEquals(result.isFloating, true);
 });
 
-Deno.test("parseTag - floating trixie-20260202-slim", () => {
+Deno.test("parseTag - versioned trixie-20260202-slim", () => {
   const result = parseTag("trixie-20260202-slim");
-  assertEquals(result.version, []);
-  assertEquals(result.variantKey, "trixie-20260202-slim");
-  assertEquals(result.isFloating, true);
+  assertEquals(result.version, ["20260202"]);
+  assertEquals(result.variantKey, "trixie-*-slim");
+  assertEquals(result.isFloating, false);
 });
 
 Deno.test("parseTag - floating trixie", () => {
@@ -420,6 +420,20 @@ Deno.test("groupByVariant - with digest map re-parsing", () => {
   assertEquals(psVariant?.latest?.original, "ps-8.0.44-35");
   assertEquals(psVariant?.older.length, 1);
   assertEquals(psVariant?.older[0].original, "ps-8.0.43-34");
+});
+
+Deno.test("parseTag - version- prefix with date", () => {
+  const result = parseTag("version-20201102.25-unstable");
+  assertEquals(result.version, ["20201102.25-unstable"]);
+  assertEquals(result.variantKey, "version-*");
+  assertEquals(result.isFloating, false);
+});
+
+Deno.test("parseTag - arch version- prefix with date", () => {
+  const result = parseTag("amd64-version-20201102.25-unstable");
+  assertEquals(result.version, ["20201102.25-unstable"]);
+  assertEquals(result.variantKey, "amd64-version-*");
+  assertEquals(result.isFloating, false);
 });
 
 Deno.test("findBestUpgrade - preserves prefix from re-parsed tag", () => {
@@ -694,18 +708,18 @@ Deno.test("parseTag - floating arm64v8-latest", () => {
   assertEquals(result.isFloating, true);
 });
 
-Deno.test("parseTag - enterprise still floating", () => {
+Deno.test("parseTag - enterprise now versioned", () => {
   const result = parseTag("enterprise-7.6.9");
-  assertEquals(result.version, []);
-  assertEquals(result.variantKey, "enterprise-7.6.9");
-  assertEquals(result.isFloating, true);
+  assertEquals(result.version, ["7.6.9"]);
+  assertEquals(result.variantKey, "enterprise-*");
+  assertEquals(result.isFloating, false);
 });
 
-Deno.test("parseTag - ps still floating", () => {
+Deno.test("parseTag - ps now versioned", () => {
   const result = parseTag("ps-8.0.44-35");
-  assertEquals(result.version, []);
-  assertEquals(result.variantKey, "ps-8.0.44-35");
-  assertEquals(result.isFloating, true);
+  assertEquals(result.version, ["8.0.44-35"]);
+  assertEquals(result.variantKey, "ps-*");
+  assertEquals(result.isFloating, false);
 });
 
 Deno.test("groupByVariant - imagegenius with suffix inference", () => {
@@ -1028,18 +1042,18 @@ Deno.test("findBestUpgrade - lsio focal variant", () => {
   assertEquals(result, "focal-3cc49244-ls21");
 });
 
-Deno.test("parseTag - false positive ps-8.0.44-35 unchanged", () => {
+Deno.test("parseTag - ps-8.0.44-35 now versioned via dash-digit", () => {
   const result = parseTag("ps-8.0.44-35");
-  assertEquals(result.variantKey, "ps-8.0.44-35");
-  assertEquals(result.version, []);
-  assertEquals(result.isFloating, true);
+  assertEquals(result.variantKey, "ps-*");
+  assertEquals(result.version, ["8.0.44-35"]);
+  assertEquals(result.isFloating, false);
 });
 
-Deno.test("parseTag - false positive trixie-20260202-slim unchanged", () => {
+Deno.test("parseTag - trixie-20260202-slim now versioned via dash-digit", () => {
   const result = parseTag("trixie-20260202-slim");
-  assertEquals(result.variantKey, "trixie-20260202-slim");
-  assertEquals(result.version, []);
-  assertEquals(result.isFloating, true);
+  assertEquals(result.variantKey, "trixie-*-slim");
+  assertEquals(result.version, ["20260202"]);
+  assertEquals(result.isFloating, false);
 });
 
 Deno.test("groupByVariant - digestMatches for floating tag", () => {

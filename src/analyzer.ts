@@ -57,6 +57,12 @@ export function parseTag(tag: string): ParsedTag {
   ) {
     prefix += "version-v";
     remaining = remaining.slice(9);
+  } else if (
+    remaining.toLowerCase().startsWith("version-") &&
+    /^\d/.test(remaining.slice(8))
+  ) {
+    prefix += "version-";
+    remaining = remaining.slice(8);
   } else if (remaining.toLowerCase() === "v") {
     prefix += "v";
     remaining = "";
@@ -105,8 +111,17 @@ export function parseTag(tag: string): ParsedTag {
     return buildResult(tag, prefix, remaining, "", false, false);
   }
 
-  if (!remaining || !/^\d/.test(remaining)) {
-    return buildResult(tag, prefix, "", remaining, false, true);
+  if (!remaining) {
+    return buildResult(tag, prefix, "", "", false, true);
+  }
+  if (!/^\d/.test(remaining)) {
+    const dashDigit = remaining.search(/-\d/);
+    if (dashDigit !== -1) {
+      prefix += remaining.slice(0, dashDigit + 1);
+      remaining = remaining.slice(dashDigit + 1);
+    } else {
+      return buildResult(tag, prefix, "", remaining, false, true);
+    }
   }
 
   const javaMatch = remaining.match(JAVA_STYLE_REGEX);
@@ -154,7 +169,7 @@ export function parseTag(tag: string): ParsedTag {
     );
   }
 
-  return buildResult(tag, prefix, "", remaining, false, true);
+  return buildResult(tag, prefix, remaining, "", false, false);
 }
 
 function isValidSemver(version: string): boolean {
