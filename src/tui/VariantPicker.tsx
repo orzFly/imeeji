@@ -24,7 +24,16 @@ export function VariantPicker({
 }: VariantPickerProps) {
   const { rows } = useTerminalSize();
   const viewportItems = Math.max(1, Math.floor((rows - 6) / 3));
-  const { cursor, visibleRange, moveUp, moveDown } = useViewport({
+  const {
+    cursor,
+    visibleRange,
+    moveUp,
+    moveDown,
+    movePageUp,
+    movePageDown,
+    moveHome,
+    moveEnd,
+  } = useViewport({
     itemCount: variants.length,
     viewportHeight: viewportItems,
   });
@@ -34,6 +43,14 @@ export function VariantPicker({
       moveUp();
     } else if (key.downArrow) {
       moveDown();
+    } else if (key.pageUp) {
+      movePageUp();
+    } else if (key.pageDown) {
+      movePageDown();
+    } else if (key.home) {
+      moveHome();
+    } else if (key.end) {
+      moveEnd();
     } else if (key.escape) {
       onCancel();
     } else if (key.return) {

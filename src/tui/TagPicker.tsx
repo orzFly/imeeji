@@ -58,7 +58,16 @@ export function TagPicker({
 
   const { rows } = useTerminalSize();
   const viewportHeight = Math.max(1, rows - 8 - changelogLines * 2);
-  const { cursor, visibleRange, moveUp, moveDown } = useViewport({
+  const {
+    cursor,
+    visibleRange,
+    moveUp,
+    moveDown,
+    movePageUp,
+    movePageDown,
+    moveHome,
+    moveEnd,
+  } = useViewport({
     itemCount: items.length,
     viewportHeight,
   });
@@ -68,6 +77,14 @@ export function TagPicker({
       moveUp();
     } else if (key.downArrow) {
       moveDown();
+    } else if (key.pageUp) {
+      movePageUp();
+    } else if (key.pageDown) {
+      movePageDown();
+    } else if (key.home) {
+      moveHome();
+    } else if (key.end) {
+      moveEnd();
     } else if (key.escape) {
       onBack();
     } else if (key.return) {

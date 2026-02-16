@@ -62,6 +62,14 @@ export function UpdateList({
       onCursorChange(cursor > 0 ? cursor - 1 : updates.length - 1);
     } else if (key.downArrow) {
       onCursorChange(cursor < updates.length - 1 ? cursor + 1 : 0);
+    } else if (key.pageUp) {
+      onCursorChange(Math.max(0, cursor - viewportItems));
+    } else if (key.pageDown) {
+      onCursorChange(Math.min(updates.length - 1, cursor + viewportItems));
+    } else if (key.home) {
+      onCursorChange(0);
+    } else if (key.end) {
+      onCursorChange(Math.max(0, updates.length - 1));
     } else if (input === " ") {
       onToggle(cursor);
     } else if (key.return) {

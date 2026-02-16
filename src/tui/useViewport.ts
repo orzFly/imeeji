@@ -12,6 +12,10 @@ interface UseViewportResult {
   setCursor: (index: number) => void;
   moveUp: () => void;
   moveDown: () => void;
+  movePageUp: () => void;
+  movePageDown: () => void;
+  moveHome: () => void;
+  moveEnd: () => void;
 }
 
 export function useViewport(
@@ -40,6 +44,22 @@ export function useViewport(
     setCursorState(Math.max(0, Math.min(index, itemCount - 1)));
   }, [itemCount]);
 
+  const movePageUp = useCallback(() => {
+    setCursorState((c) => Math.max(0, c - viewportHeight));
+  }, [viewportHeight]);
+
+  const movePageDown = useCallback(() => {
+    setCursorState((c) => Math.min(itemCount - 1, c + viewportHeight));
+  }, [itemCount, viewportHeight]);
+
+  const moveHome = useCallback(() => {
+    setCursorState(0);
+  }, []);
+
+  const moveEnd = useCallback(() => {
+    setCursorState(Math.max(0, itemCount - 1));
+  }, [itemCount]);
+
   return {
     cursor,
     scrollOffset,
@@ -47,5 +67,9 @@ export function useViewport(
     setCursor,
     moveUp,
     moveDown,
+    movePageUp,
+    movePageDown,
+    moveHome,
+    moveEnd,
   };
 }
