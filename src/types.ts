@@ -30,6 +30,7 @@ export interface VariantGroup {
   latestTimestamp?: Date;
   older: ParsedTag[];
   floating: ParsedTag[];
+  digestMatches?: Map<string, string>;
 }
 
 export interface ImageUpdate {

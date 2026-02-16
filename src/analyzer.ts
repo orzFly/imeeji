@@ -421,6 +421,52 @@ export function groupByVariant(
     });
   }
 
+  if (digestMap) {
+    const digestToVersioned = new Map<string, ParsedTag[]>();
+    const digestToFloating = new Map<string, ParsedTag[]>();
+
+    for (const variant of result) {
+      for (const tag of [variant.latest, ...variant.older]) {
+        if (tag) {
+          const digest = digestMap.get(tag.original);
+          if (digest) {
+            if (!digestToVersioned.has(digest)) {
+              digestToVersioned.set(digest, []);
+            }
+            digestToVersioned.get(digest)!.push(tag);
+          }
+        }
+      }
+      for (const tag of variant.floating) {
+        const digest = digestMap.get(tag.original);
+        if (digest) {
+          if (!digestToFloating.has(digest)) {
+            digestToFloating.set(digest, []);
+          }
+          digestToFloating.get(digest)!.push(tag);
+        }
+      }
+    }
+
+    for (const variant of result) {
+      const matches = new Map<string, string>();
+      for (const tag of [variant.latest, ...variant.older]) {
+        if (tag) {
+          const digest = digestMap.get(tag.original);
+          if (digest) {
+            const floatings = digestToFloating.get(digest);
+            if (floatings && floatings.length === 1) {
+              matches.set(tag.original, floatings[0].original);
+            }
+          }
+        }
+      }
+      if (matches.size > 0) {
+        variant.digestMatches = matches;
+      }
+    }
+  }
+
   return result.sort((a, b) => {
     if (a.variantKey === "*" && b.variantKey !== "*") return -1;
     if (b.variantKey === "*" && a.variantKey !== "*") return 1;

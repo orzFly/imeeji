@@ -9,6 +9,12 @@ import { formatVariantLabel } from "./format.ts";
 import { getTagUrl } from "./tagUrl.ts";
 import { Link } from "./Link.tsx";
 
+interface TagItem {
+  tag: string;
+  isFloating: boolean;
+  floatingMatch?: string;
+}
+
 interface TagPickerProps {
   update: ImageUpdate;
   activeVariantIdx: number;
@@ -25,14 +31,26 @@ export function TagPicker({
   onChangeVariant,
 }: TagPickerProps) {
   const variant = update.variants[activeVariantIdx];
-  const tags: string[] = [];
+  const items: TagItem[] = [];
 
   if (variant.latest) {
-    tags.push(variant.latest.original);
+    const floatingMatch = variant.digestMatches?.get(variant.latest.original);
+    items.push({
+      tag: variant.latest.original,
+      isFloating: false,
+      floatingMatch,
+    });
   }
 
   for (const t of variant.older.slice(0, 19)) {
-    tags.push(t.original);
+    const floatingMatch = variant.digestMatches?.get(t.original);
+    items.push({ tag: t.original, isFloating: false, floatingMatch });
+  }
+
+  const floatingCount = variant.floating.length;
+  const floatingStartIdx = items.length;
+  for (const t of variant.floating) {
+    items.push({ tag: t.original, isFloating: true });
   }
 
   const changelog = update.lsioMetadata?.changelog ?? [];
@@ -41,7 +59,7 @@ export function TagPicker({
   const { rows } = useTerminalSize();
   const viewportHeight = Math.max(1, rows - 8 - changelogLines * 2);
   const { cursor, visibleRange, moveUp, moveDown } = useViewport({
-    itemCount: tags.length,
+    itemCount: items.length,
     viewportHeight,
   });
 
@@ -53,17 +71,17 @@ export function TagPicker({
     } else if (key.escape) {
       onBack();
     } else if (key.return) {
-      if (tags[cursor]) {
-        onSelect(tags[cursor]);
+      if (items[cursor]) {
+        onSelect(items[cursor].tag);
       }
     } else if (key.tab && update.variants.length > 1) {
       onChangeVariant();
     }
   });
 
-  const visibleTags = tags.slice(visibleRange.start, visibleRange.end);
+  const visibleItems = items.slice(visibleRange.start, visibleRange.end);
   const aboveCount = visibleRange.start;
-  const belowCount = tags.length - visibleRange.end;
+  const belowCount = items.length - visibleRange.end;
 
   const imageName = `${update.image.registry}/${update.image.repository}`;
 
@@ -107,23 +125,56 @@ export function TagPicker({
         </Box>
       )}
 
-      {visibleTags.map((tag, relIdx) => {
+      {visibleItems.map((item, relIdx) => {
         const idx = visibleRange.start + relIdx;
         const isHighlighted = idx === cursor;
-        const isCurrent = tag === update.currentTag;
+        const isCurrent = item.tag === update.currentTag;
         const tagUrl = getTagUrl(
           update.image.registry,
           update.image.repository,
-          tag,
+          item.tag,
         );
-        const suffix = `${isCurrent ? "*" : ""}${
-          idx === 0 && variant.latest && tag === variant.latest.original
-            ? " (latest)"
-            : ""
-        }`;
+
+        if (item.isFloating && idx === floatingStartIdx && floatingCount > 0) {
+          return (
+            <Box key={item.tag} flexDirection="column">
+              <Box>
+                <Text dimColor>── Floating tags ──</Text>
+              </Box>
+              <Box key={item.tag}>
+                <Text
+                  color={isHighlighted ? "cyan" : undefined}
+                  bold={isHighlighted}
+                >
+                  {isHighlighted ? "> " : "  "}
+                </Text>
+                <Link
+                  url={tagUrl}
+                  color={isHighlighted ? "cyan" : "gray"}
+                  bold={isHighlighted}
+                >
+                  {item.tag}
+                </Link>
+                <Text color={isHighlighted ? "cyan" : undefined}>
+                  {isCurrent ? "*" : ""}
+                </Text>
+              </Box>
+            </Box>
+          );
+        }
+
+        let suffix = "";
+        if (isCurrent) suffix += "*";
+        if (item.floatingMatch) suffix += ` (${item.floatingMatch})`;
+        else if (
+          idx === 0 && variant.latest && item.tag === variant.latest.original &&
+          !item.isFloating
+        ) {
+          suffix += " (latest)";
+        }
 
         return (
-          <Box key={tag}>
+          <Box key={item.tag}>
             <Text
               color={isHighlighted ? "cyan" : undefined}
               bold={isHighlighted}
@@ -132,14 +183,18 @@ export function TagPicker({
             </Text>
             <Link
               url={tagUrl}
-              color={isHighlighted ? "cyan" : undefined}
+              color={isHighlighted
+                ? "cyan"
+                : item.isFloating
+                ? "gray"
+                : undefined}
               bold={isHighlighted}
             >
-              {tag}
+              {item.tag}
             </Link>
             <Text
-              color={isHighlighted ? "cyan" : undefined}
-              bold={isHighlighted}
+              color={isHighlighted ? "cyan" : "gray"}
+              dimColor={!isHighlighted}
             >
               {suffix}
             </Text>

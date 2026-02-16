@@ -964,3 +964,49 @@ Deno.test("parseTag - false positive trixie-20260202-slim unchanged", () => {
   assertEquals(result.version, []);
   assertEquals(result.isFloating, true);
 });
+
+Deno.test("groupByVariant - digestMatches for floating tag", () => {
+  const tags = ["1.0.0", "0.9.0", "latest"];
+  const digestMap = new Map<string, string>([
+    ["1.0.0", "sha256:abc123"],
+    ["latest", "sha256:abc123"],
+    ["0.9.0", "sha256:def456"],
+  ]);
+  const variants = groupByVariant(tags, digestMap);
+
+  const defaultVariant = variants.find((v) => v.variantKey === "*");
+  assertEquals(defaultVariant?.latest?.original, "1.0.0");
+  assertEquals(defaultVariant?.floating.length, 1);
+  assertEquals(defaultVariant?.floating[0].original, "latest");
+  assertEquals(defaultVariant?.digestMatches?.get("1.0.0"), "latest");
+  assertEquals(defaultVariant?.digestMatches?.has("0.9.0"), false);
+});
+
+Deno.test("groupByVariant - no digestMatches when multiple floatings match", () => {
+  const tags = ["1.0.0", "latest", "stable"];
+  const digestMap = new Map<string, string>([
+    ["1.0.0", "sha256:abc123"],
+    ["latest", "sha256:abc123"],
+    ["stable", "sha256:abc123"],
+  ]);
+  const variants = groupByVariant(tags, digestMap);
+
+  const defaultVariant = variants.find((v) => v.variantKey === "*");
+  const hasMatch = defaultVariant?.digestMatches?.has("1.0.0") ?? false;
+  assertEquals(hasMatch, false);
+});
+
+Deno.test("groupByVariant - floating tags selectable in picker", () => {
+  const tags = ["1.0.0-alpine", "0.9.0-alpine", "alpine"];
+  const digestMap = new Map<string, string>([
+    ["1.0.0-alpine", "sha256:aaa"],
+    ["alpine", "sha256:aaa"],
+  ]);
+  const variants = groupByVariant(tags, digestMap);
+
+  const alpineVariant = variants.find((v) => v.variantKey === "*-alpine");
+  assertEquals(alpineVariant?.latest?.original, "1.0.0-alpine");
+  assertEquals(alpineVariant?.floating.length, 1);
+  assertEquals(alpineVariant?.floating[0].original, "alpine");
+  assertEquals(alpineVariant?.digestMatches?.get("1.0.0-alpine"), "alpine");
+});
