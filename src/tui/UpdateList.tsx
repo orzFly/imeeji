@@ -137,17 +137,18 @@ export function UpdateList({
                 <Text
                   color={isHighlighted ? "cyan" : undefined}
                   bold={isHighlighted}
+                  wrap="truncate"
                 >
                   {prefix}
                   {checkbox}
                   {truncate(formatImageName(u.image), imageNameMax)}
                 </Text>
                 {u.lsioMetadata?.deprecated && (
-                  <Text color="red" bold>DEPRECATED</Text>
+                  <Text color="red" bold wrap="truncate">DEPRECATED</Text>
                 )}
               </Box>
               <Box>
-                <Text dimColor>{location}</Text>
+                <Text dimColor wrap="truncate">{location}</Text>
               </Box>
             </Box>
             <Box marginLeft={4}>
@@ -161,7 +162,7 @@ export function UpdateList({
               >
                 {truncate(u.currentTag, tagMax)}
               </Link>
-              <Text dimColor>→</Text>
+              <Text dimColor wrap="truncate">→</Text>
               <Link
                 url={getTagUrl(
                   u.image.registry,

@@ -116,7 +116,7 @@ export function TagPicker({
         <TitleBar title="Select Version" subtitle={imageName} />
       </Box>
       <Box marginBottom={1}>
-        <Text dimColor>
+        <Text dimColor wrap="truncate">
           Current: {update.currentTag} | Variant: {formatVariantLabel(variant)}
         </Text>
       </Box>
@@ -126,8 +126,8 @@ export function TagPicker({
           <Text bold>Recent Changes:</Text>
           {changelog.map((entry, idx) => (
             <Box key={idx}>
-              <Text dimColor>{entry.date}:</Text>
-              <Text>
+              <Text dimColor wrap="truncate">{entry.date}:</Text>
+              <Text wrap="truncate">
                 {entry.description.slice(0, 60)}
                 {entry.description.length > 60 ? "..." : ""}
               </Text>
@@ -156,12 +156,13 @@ export function TagPicker({
           return (
             <Box key={item.tag} flexDirection="column">
               <Box>
-                <Text dimColor>── Floating tags ──</Text>
+                <Text dimColor wrap="truncate">── Floating tags ──</Text>
               </Box>
               <Box key={item.tag}>
                 <Text
                   color={isHighlighted ? "cyan" : undefined}
                   bold={isHighlighted}
+                  wrap="truncate"
                 >
                   {isHighlighted ? "> " : "  "}
                 </Text>
@@ -172,7 +173,7 @@ export function TagPicker({
                 >
                   {item.tag}
                 </Link>
-                <Text color={isHighlighted ? "cyan" : undefined}>
+                <Text color={isHighlighted ? "cyan" : undefined} wrap="truncate">
                   {isCurrent ? "*" : ""}
                 </Text>
               </Box>
@@ -195,6 +196,7 @@ export function TagPicker({
             <Text
               color={isHighlighted ? "cyan" : undefined}
               bold={isHighlighted}
+              wrap="truncate"
             >
               {isHighlighted ? "> " : "  "}
             </Text>
@@ -212,6 +214,7 @@ export function TagPicker({
             <Text
               color={isHighlighted ? "cyan" : "gray"}
               dimColor={!isHighlighted}
+              wrap="truncate"
             >
               {suffix}
             </Text>

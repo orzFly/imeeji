@@ -100,18 +100,17 @@ export function VariantPicker({
 
         return (
           <Box key={idx} flexDirection="column" marginBottom={1}>
-            <Box>
-              <Text
-                color={isHighlighted ? "cyan" : undefined}
-                bold={isHighlighted}
-              >
-                {isHighlighted ? "> " : "  "}
-                {formatVariantLabel(v).padEnd(15)}
-                {isCurrent ? "*" : ""}
-              </Text>
-            </Box>
-            <Text color="green">{`   ${previewStr}`}</Text>
-            {floatingStr && <Text dimColor>{`   (${floatingStr})`}</Text>}
+            <Text
+              color={isHighlighted ? "cyan" : undefined}
+              bold={isHighlighted}
+              wrap="truncate"
+            >
+              {isHighlighted ? "> " : "  "}
+              {formatVariantLabel(v).padEnd(15)}
+              {isCurrent ? "*" : ""}
+            </Text>
+            <Text color="green" wrap="truncate">{`   ${previewStr}`}</Text>
+            {floatingStr && <Text dimColor wrap="truncate">{`   (${floatingStr})`}</Text>}
           </Box>
         );
       })}
