@@ -8,6 +8,7 @@ import { ControlBar } from "./ControlBar.tsx";
 import { formatVariantLabel } from "./format.ts";
 
 interface VariantPickerProps {
+  imageName: string;
   variants: VariantGroup[];
   currentVariantIdx: number;
   onSelect: (variantIdx: number) => void;
@@ -15,6 +16,7 @@ interface VariantPickerProps {
 }
 
 export function VariantPicker({
+  imageName,
   variants,
   currentVariantIdx,
   onSelect,
@@ -51,7 +53,7 @@ export function VariantPicker({
   return (
     <Box flexDirection="column" height={rows} overflow="hidden">
       <Box marginBottom={1}>
-        <TitleBar title="Select Variant" />
+        <TitleBar title="Select Variant" subtitle={imageName} />
       </Box>
 
       {aboveCount > 0 && (

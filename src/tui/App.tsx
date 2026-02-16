@@ -90,8 +90,10 @@ export function App({ updates, fileContents, onDone }: AppProps) {
 
   if (view === "variants") {
     const update = updates[pickerImageIdx];
+    const imageName = `${update.image.registry}/${update.image.repository}`;
     return (
       <VariantPicker
+        imageName={imageName}
         variants={update.variants}
         currentVariantIdx={pickerVariantIdx}
         onSelect={(idx) => {

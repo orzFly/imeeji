@@ -32,8 +32,10 @@ function AdhocApp(
   }, [onDone]);
 
   if (view === "variant") {
+    const imageName = `${update.image.registry}/${update.image.repository}`;
     return (
       <VariantPicker
+        imageName={imageName}
         variants={update.variants}
         currentVariantIdx={variantIdx}
         onSelect={(idx) => {
