@@ -444,6 +444,83 @@ Deno.test("findImages extracts docker images", () => {
   assertEquals(images[0].tag, "18.1-alpine");
 });
 
+Deno.test("findImages extracts FROM directive with tag", () => {
+  const content = "FROM node:20-alpine";
+  const images = findImages(content, "Dockerfile");
+  assertEquals(images.length, 1);
+  assertEquals(images[0].registry, "docker.io");
+  assertEquals(images[0].repository, "library/node");
+  assertEquals(images[0].tag, "20-alpine");
+  assertEquals(images[0].hasExplicitTag, true);
+});
+
+Deno.test("findImages extracts FROM directive without tag", () => {
+  const content = "FROM nginx";
+  const images = findImages(content, "Dockerfile");
+  assertEquals(images.length, 1);
+  assertEquals(images[0].registry, "docker.io");
+  assertEquals(images[0].repository, "library/nginx");
+  assertEquals(images[0].tag, "latest");
+  assertEquals(images[0].hasExplicitTag, false);
+});
+
+Deno.test("findImages extracts FROM directive with AS stage", () => {
+  const content = "FROM node:20-alpine AS builder";
+  const images = findImages(content, "Dockerfile");
+  assertEquals(images.length, 1);
+  assertEquals(images[0].repository, "library/node");
+  assertEquals(images[0].tag, "20-alpine");
+});
+
+Deno.test("findImages extracts FROM directive with --platform flag", () => {
+  const content = "FROM --platform=linux/amd64 node:20-alpine";
+  const images = findImages(content, "Dockerfile");
+  assertEquals(images.length, 1);
+  assertEquals(images[0].repository, "library/node");
+  assertEquals(images[0].tag, "20-alpine");
+});
+
+Deno.test("findImages extracts FROM directive with --platform and AS", () => {
+  const content = "FROM --platform=linux/arm64 golang:1.22 AS builder";
+  const images = findImages(content, "Dockerfile");
+  assertEquals(images.length, 1);
+  assertEquals(images[0].repository, "library/golang");
+  assertEquals(images[0].tag, "1.22");
+});
+
+Deno.test("findImages skips FROM scratch", () => {
+  const content = "FROM scratch";
+  const images = findImages(content, "Dockerfile");
+  assertEquals(images.length, 0);
+});
+
+Deno.test("findImages extracts FROM with fully qualified image", () => {
+  const content = "FROM ghcr.io/linuxserver/baseimage-ubuntu:jammy";
+  const images = findImages(content, "Dockerfile");
+  assertEquals(images.length, 1);
+  assertEquals(images[0].registry, "ghcr.io");
+  assertEquals(images[0].repository, "linuxserver/baseimage-ubuntu");
+  assertEquals(images[0].tag, "jammy");
+});
+
+Deno.test("findImages extracts multiple FROM directives in multi-stage build", () => {
+  const content = `FROM node:20-alpine AS builder
+FROM nginx:alpine
+FROM scratch AS final`;
+  const images = findImages(content, "Dockerfile");
+  assertEquals(images.length, 2);
+  assertEquals(images[0].repository, "library/node");
+  assertEquals(images[0].tag, "20-alpine");
+  assertEquals(images[1].repository, "library/nginx");
+  assertEquals(images[1].tag, "alpine");
+});
+
+Deno.test("findImages FROM escaper preserves original format", () => {
+  const content = "FROM node:20-alpine";
+  const images = findImages(content, "Dockerfile");
+  assertEquals(images[0].escaper?.("22-alpine"), "node:22-alpine");
+});
+
 Deno.test("parseTag - milestone M02 no suffix", () => {
   const result = parseTag("8.0-M02");
   assertEquals(result.version, ["8.0-M02"]);
