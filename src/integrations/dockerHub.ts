@@ -26,12 +26,12 @@ export function isDockerHubRepository(registry: string): boolean {
   return registry === "docker.io" || registry === "registry.hub.docker.com";
 }
 
-const MAX_PAGES = 10;
-
 export async function fetchDockerHubTags(
   repository: string,
   currentTag?: string,
+  allTags?: boolean,
 ): Promise<DockerHubFetchResult> {
+  const maxPages = allTags ? Infinity : 10;
   let namespace = "library";
   let repo = repository;
 
@@ -49,7 +49,7 @@ export async function fetchDockerHubTags(
   let nextUrl: string | null =
     `${DOCKER_HUB_API}/v2/namespaces/${namespace}/repositories/${repo}/tags?page_size=100`;
 
-  while (nextUrl && page <= MAX_PAGES) {
+  while (nextUrl && page <= maxPages) {
     try {
       const response = await myFetch(nextUrl);
       if (!response.ok) {
@@ -74,7 +74,7 @@ export async function fetchDockerHubTags(
         }
       }
 
-      if (currentTag && foundCurrentTag) {
+      if (!allTags && currentTag && foundCurrentTag) {
         if (data.next) {
           const nextResponse = await myFetch(data.next);
           if (nextResponse.ok) {

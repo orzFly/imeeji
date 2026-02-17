@@ -18,6 +18,7 @@ export async function fetchTagsEnriched(
   registry: string,
   repository: string,
   currentTag?: string,
+  allTags?: boolean,
 ): Promise<
   {
     tags: string[];
@@ -27,7 +28,7 @@ export async function fetchTagsEnriched(
   }
 > {
   if (isDockerHubRepository(registry)) {
-    return fetchDockerHubTags(repository, currentTag);
+    return fetchDockerHubTags(repository, currentTag, allTags);
   }
 
   const tags = await fetchOciTags(registry, repository);

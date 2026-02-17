@@ -107,10 +107,16 @@ function findVariantWithTag(tag: string, variants: VariantGroup[]): number {
 
 export async function fetchImageVariants(
   parsed: ParsedImageRef,
+  allTags?: boolean,
 ): Promise<
   { result: TagFetchResult; variants: VariantGroup[]; lsioMetadata?: unknown }
 > {
-  const result = await fetchTagsEnriched(parsed.registry, parsed.repository);
+  const result = await fetchTagsEnriched(
+    parsed.registry,
+    parsed.repository,
+    undefined,
+    allTags,
+  );
 
   if (result.tags.length === 0) {
     return { result, variants: [] };
@@ -222,11 +228,12 @@ export function selectAutoTag(
 export async function runAdhocMode(
   parsed: ParsedImageRef,
   autoYes: boolean,
+  allTags?: boolean,
 ): Promise<string | null> {
   const key = getRepositoryKey(parsed.registry, parsed.repository);
   console.log(`Fetching tags for ${key}...`);
 
-  const { variants, lsioMetadata } = await fetchImageVariants(parsed);
+  const { variants, lsioMetadata } = await fetchImageVariants(parsed, allTags);
 
   if (variants.length === 0) {
     console.error(`No tags found for ${key}`);

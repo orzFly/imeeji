@@ -36,6 +36,7 @@ OPTIONS:
    -y, --yes              Auto-accept latest versions (non-interactive)
    -i, --image            Force ad-hoc mode (argument is image, not path)
    --allow-comments       Parse images inside comment lines
+   --all-tags             Fetch all tags from registries (no limit)
    --include <PATTERN>    Include glob pattern (repeatable, adds to defaults)
    --exclude <PATTERN>    Exclude glob pattern (repeatable)
    --exclude-default      Disable default include patterns
@@ -71,6 +72,7 @@ async function main(): Promise<void> {
       "include-ignored",
       "allow-comments",
       "image",
+      "all-tags",
     ],
     string: ["include", "exclude"],
     alias: {
@@ -104,7 +106,8 @@ async function main(): Promise<void> {
     }
     const parsedImage = parseImageRef(inputPaths[0]);
     const autoYes = parsed.yes ?? false;
-    const result = await runAdhocMode(parsedImage, autoYes);
+    const allTags = parsed["all-tags"] ?? false;
+    const result = await runAdhocMode(parsedImage, autoYes, allTags);
     if (result) {
       console.log(result);
       return;
@@ -121,6 +124,7 @@ async function main(): Promise<void> {
   const dryRun = parsed["dry-run"] ?? false;
   const autoYes = parsed.yes ?? false;
   const allowComments = parsed["allow-comments"] ?? false;
+  const allTags = parsed["all-tags"] ?? false;
   const includePatterns = parsed.include as string[] | undefined;
   const excludePatterns = parsed.exclude as string[] | undefined;
   const excludeDefault = parsed["exclude-default"] ?? false;
@@ -137,7 +141,7 @@ async function main(): Promise<void> {
     const singleArg = inputPaths[0];
     const parsedImage = parseImageRef(singleArg);
     if (parsedImage) {
-      const result = await runAdhocMode(parsedImage, autoYes);
+      const result = await runAdhocMode(parsedImage, autoYes, allTags);
       if (result) {
         console.log(result);
         return;
@@ -192,6 +196,7 @@ async function main(): Promise<void> {
         image.registry,
         image.repository,
         image.tag,
+        allTags,
       );
       return { key, result };
     }),
