@@ -110,7 +110,9 @@ export function VariantPicker({
               {isCurrent ? "*" : ""}
             </Text>
             <Text color="green" wrap="truncate">{`   ${previewStr}`}</Text>
-            {floatingStr && <Text dimColor wrap="truncate">{`   (${floatingStr})`}</Text>}
+            {floatingStr && (
+              <Text dimColor wrap="truncate">{`   (${floatingStr})`}</Text>
+            )}
           </Box>
         );
       })}

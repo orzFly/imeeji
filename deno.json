@@ -1,7 +1,11 @@
 {
-  "name": "imeeji",
+  "name": "@orz/imeeji",
   "version": "0.1.0",
   "exports": "./src/main.ts",
+  "publish": {
+    "include": ["src/", "deno.json", "README.md", "LICENSE"],
+    "exclude": ["src/*_test.ts"]
+  },
   "permissions": {
     "default": {
       "net": true,

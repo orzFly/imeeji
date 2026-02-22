@@ -379,10 +379,10 @@ function compareFloatingGroupSpecificity(a: string, b: string): number {
   const bWildcardCount = bTokens.filter((token) => token === "*").length;
   if (aWildcardCount !== bWildcardCount) return aWildcardCount - bWildcardCount;
 
-  const aIsPrefixWildcard =
-    aTokens.length > 1 && aTokens[aTokens.length - 1] === "*";
-  const bIsPrefixWildcard =
-    bTokens.length > 1 && bTokens[bTokens.length - 1] === "*";
+  const aIsPrefixWildcard = aTokens.length > 1 &&
+    aTokens[aTokens.length - 1] === "*";
+  const bIsPrefixWildcard = bTokens.length > 1 &&
+    bTokens[bTokens.length - 1] === "*";
   if (aIsPrefixWildcard !== bIsPrefixWildcard) {
     return aIsPrefixWildcard ? -1 : 1;
   }
@@ -480,7 +480,10 @@ export function groupByVariant(
     }
 
     wildcardCandidates.sort((a, b) =>
-      compareFloatingGroupSpecificity(a.variant.variantKey, b.variant.variantKey)
+      compareFloatingGroupSpecificity(
+        a.variant.variantKey,
+        b.variant.variantKey,
+      )
     );
     result[wildcardCandidates[0].idx].floating.push(floatingTag);
   }

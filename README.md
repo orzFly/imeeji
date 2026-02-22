@@ -4,18 +4,22 @@ Interactive Docker image upgrade tool for configuration files.
 
 ## Installation
 
-### Using Deno
+### npm
 
 ```bash
-deno install -P -n imeeji jsr:imeeji
+npm install -g imeeji
 ```
 
-### From Source
+### Deno
 
 ```bash
-git clone https://github.com/user/imeeji.git
-cd imeeji
-deno install -P -n imeeji src/main.ts
+deno install -Agn imeeji jsr:@orz/imeeji
+```
+
+### One-off
+
+```bash
+npx imeeji nginx
 ```
 
 ## Usage

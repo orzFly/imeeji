@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DENO_NO_PACKAGE_JSON: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - run: deno fmt --check
+      - run: deno lint
+      - run: deno check src/main.ts
+      - run: deno task test
+      - run: deno task build
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: node dist/imeeji.js --version

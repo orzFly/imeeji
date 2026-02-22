@@ -21,7 +21,7 @@ import { parseImageRef, runAdhocMode } from "./adhoc.ts";
 import { hashContent, scanPaths } from "./scanner.ts";
 import type { ScannedFile } from "./scanner.ts";
 
-const VERSION = "0.1.0";
+const VERSION = "dev";
 
 function printHelp(): void {
   console.log(`

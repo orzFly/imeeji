@@ -173,7 +173,10 @@ export function TagPicker({
                 >
                   {item.tag}
                 </Link>
-                <Text color={isHighlighted ? "cyan" : undefined} wrap="truncate">
+                <Text
+                  color={isHighlighted ? "cyan" : undefined}
+                  wrap="truncate"
+                >
                   {isCurrent ? "*" : ""}
                 </Text>
               </Box>

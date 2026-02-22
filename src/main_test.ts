@@ -1053,11 +1053,15 @@ Deno.test("groupByVariant - floating enterprise prefers enterprise-* over *-ente
   const tags = ["enterprise-7.6.9", "7.6.9-enterprise", "enterprise"];
   const variants = groupByVariant(tags);
 
-  const enterprisePrefix = variants.find((v) => v.variantKey === "enterprise-*");
+  const enterprisePrefix = variants.find((v) =>
+    v.variantKey === "enterprise-*"
+  );
   assertEquals(enterprisePrefix?.floating.length, 1);
   assertEquals(enterprisePrefix?.floating[0].original, "enterprise");
 
-  const enterpriseSuffix = variants.find((v) => v.variantKey === "*-enterprise");
+  const enterpriseSuffix = variants.find((v) =>
+    v.variantKey === "*-enterprise"
+  );
   assertEquals(enterpriseSuffix?.floating.length, 0);
 });
 
@@ -1087,7 +1091,10 @@ Deno.test("groupByVariant - floating wildcard matches zero tokens only", () => {
   assertEquals(enterpriseVariant?.floating.length, 0);
 
   const defaultVariant = variants.find((v) => v.variantKey === "*");
-  assertEquals(defaultVariant?.floating.some((t) => t.original === "amd64-foo-enterprise"), true);
+  assertEquals(
+    defaultVariant?.floating.some((t) => t.original === "amd64-foo-enterprise"),
+    true,
+  );
 });
 
 Deno.test("findBestUpgrade - lsio focal variant", () => {

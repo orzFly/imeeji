@@ -1,0 +1,16 @@
+{
+  "name": "imeeji",
+  "version": "0.0.0",
+  "description": "Interactive Docker image upgrade tool",
+  "type": "module",
+  "bin": { "imeeji": "./dist/imeeji.js" },
+  "files": ["dist/"],
+  "keywords": ["docker", "upgrade", "container", "semver", "tui", "compose"],
+  "author": "Yeechan Lu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/orzfly/imeeji.git"
+  },
+  "engines": { "node": ">=18" }
+}
